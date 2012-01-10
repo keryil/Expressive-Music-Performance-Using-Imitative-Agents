@@ -9,6 +9,7 @@ from copy import copy
 import pp
 from tools import miditools, logtools
 import logging
+import time
 
 class Simulation(object):
     agents = None
@@ -24,7 +25,7 @@ class Simulation(object):
         self.__jobServer = pp.Server()
         self.__logger = logtools.get_logger(__name__)
     
-    def reset(self, numberOfAgents=10):
+    def reset(self, numberOfAgents=3):
         """
         Initializes the simulation with the set number of agents and sets Simulation.resetDone = True. Should be called 
         before starting any simulation run. 
@@ -50,14 +51,18 @@ class Simulation(object):
         """
         A single cycle that allows all agents to perform.
         """
-        agents = copy(self.agents)
+        agents = self.agents
         random.shuffle(agents)
         for agent in agents:
             # make the agent perform
             output = agent.perform()
+            time.sleep(1)
+            
+            # let all other agents evaluate the performance
             for a in agents:
                 if a is not agent:
                     a.listen(output)
+                    time.sleep(1)
             
 
 if __name__ == '__main__':

@@ -22,13 +22,13 @@ class Agent(object):
 #        logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level="INFO")
         
     def perform(self):
-        self.__logger.info("Performing")
+        self.__logger.debug("Performing")
     
     def listen(self, performance):
-        self.__logger.info("Listening")
+        self.__logger.debug("Listening")
     
     def evaluate(self, performance):
-        self.__logger.info("Evaluating")
+        self.__logger.debug("Evaluating")
     
 #    def __debug(self, message):
 #        self.__logger.debug("Agent %s |::| %s::%s" % (self.id, inspect.stack()[1][3], message))

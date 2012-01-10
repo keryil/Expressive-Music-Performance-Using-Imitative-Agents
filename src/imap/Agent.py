@@ -10,11 +10,12 @@ class Agent(object):
     classdocs
     '''
     performance = None
-
-    def __init__(self):
+    id = None
+    def __init__(self, id):
         '''
         Constructor
         '''
+        self.id = id
     
     def perform(self):
         print "perform()"

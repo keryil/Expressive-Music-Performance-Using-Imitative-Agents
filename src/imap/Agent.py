@@ -17,11 +17,14 @@ class Agent(object):
         '''
     
     def perform(self):
+        print "perform()"
         pass
     
     def listen(self, performance):
+        print "listen()"
         pass
     
     def evaluate(self, performance):
+        print "evaluate()"
         pass
         

@@ -9,10 +9,19 @@ class Agent(object):
     '''
     classdocs
     '''
-    performance = MIDIFile()
+    performance = None
 
-    def __init__(selfparams):
+    def __init__(self):
         '''
         Constructor
         '''
+    
+    def perform(self):
+        pass
+    
+    def listen(self, performance):
+        pass
+    
+    def evaluate(self, performance):
+        pass
         

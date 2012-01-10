@@ -7,7 +7,7 @@ from imap.agent import Agent
 import random
 from copy import copy
 import pp
-from tools import miditools
+from tools import miditools, logtools
 import logging
 
 class Simulation(object):
@@ -22,8 +22,7 @@ class Simulation(object):
     def __init__(self):
         self.midi = miditools.prepare_initial_midi(self.defaultTempo)
         self.__jobServer = pp.Server()
-#        self.__logger = logging.getLogger(__name__)
-#        self.__logger.
+        self.__logger = logtools.get_logger(__name__)
     
     def reset(self, numberOfAgents=10):
         """
@@ -32,7 +31,7 @@ class Simulation(object):
         """
         self.agents = [Agent(i) for i in range(numberOfAgents)]
         self.resetDone = True
-        print "Reset."
+        self.__logger.info("Reset.")
     
     def run(self, numberOfCycles=100):
         """
@@ -44,7 +43,7 @@ class Simulation(object):
         self.resetDone = False
         
         for i in range(numberOfCycles):
-            print "Cycle %d" % i
+            self.__logger.info("Cycle %d" % i)
             self.cycle()
     
     def cycle(self):
@@ -56,7 +55,7 @@ class Simulation(object):
         for agent in agents:
             # make the agent perform
             output = agent.perform()
-            for a in self.agents:
+            for a in agents:
                 if a is not agent:
                     a.listen(output)
             
@@ -64,4 +63,4 @@ class Simulation(object):
 if __name__ == '__main__':
     s = Simulation()
     s.run()
-    print "Done."
+    print "Done"

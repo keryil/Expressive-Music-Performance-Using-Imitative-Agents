@@ -38,26 +38,26 @@ def __lbdm_pitch(midi):
         
         # add 15 to intervals so that we do not have 0 values 
         # which may cause div by 0 errors
-        interval = first_note.pitch - second_note.pitch + 15
+        interval = first_note.pitch - second_note.pitch + 12
         intervals.append(interval)
         logger.debug("first: p:%d t:%d d:%d v:%d" % (first_note.pitch, first_note.time, first_note.duration, first_note.volume))
         logger.debug("second: p:%d t:%d d:%d v:%d" % (second_note.pitch, second_note.time, second_note.duration, second_note.volume))
         logger.debug("Interval: %f" % interval)
     
     # first strength is calculated separately since it has no preceding interval
-    s = __strength(intervals[0], intervals[1], 15) * intervals[0]
+    s = __strength(intervals[0], intervals[1], 12) * intervals[0]
     boundaryStrengths.append(s)
     for i in range(len(intervals) - 2):
         firstInterval = intervals[i]
         secondInterval = intervals[i+1]
         thirdInterval = intervals[i+2]
         boundaryStrength = secondInterval * \
-            (__strength(firstInterval, secondInterval, 15) + \
-             __strength(secondInterval, thirdInterval, 15))
+            (__strength(firstInterval, secondInterval, 12) + \
+             __strength(secondInterval, thirdInterval, 12))
         boundaryStrengths.append(boundaryStrength)
         logger.debug("Interval: %f, Prev: %f, Next: %f, Strength: %f" % (secondInterval, firstInterval, secondInterval, boundaryStrength))
     # last strength also calculated separately
-    s = __strength(intervals[-2], intervals[-1], 15) * intervals[-1]
+    s = __strength(intervals[-2], intervals[-1], 12) * intervals[-1]
     boundaryStrengths.append(s)
         
     return boundaryStrengths

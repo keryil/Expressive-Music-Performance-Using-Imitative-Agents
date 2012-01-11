@@ -8,10 +8,10 @@ import re
 
 LINE_REGEX = re.compile("^(?P<time>\d+) (?P<on_off>(On|Off)).*n=(?P<pitch>\d+).*v=(?P<volume>\d+)")
 
-def prepare_initial_midi(tempo):
+def prepare_initial_midi(text, out, tempo):
         midi = MIDIFile(1)
         midi.addTempo(track=0, time=0, tempo=tempo)
-        midiText = open("midi_text.txt")
+        midiText = open(text)
         duration = -1
         pitch = volume = time = -1
         for line in midiText:
@@ -28,5 +28,5 @@ def prepare_initial_midi(tempo):
                 midi.addNote(0, 0, pitch, time, duration, volume)
 #                print "Added p: %d t: %d d: %f v: %d" % (pitch,time,duration,volume)
                 duration = -1
-        midi.writeFile(open("sample.midi","w"))
+        midi.writeFile(open(out,"w"))
         return midi

@@ -15,7 +15,7 @@ import time
 class Simulation(object):
     agents = None
     midi = None
-    defaultTempo = 19000 * 0.8
+    defaultTempo = 19000
     resetDone = False
     __jobServer = None
     __logger = None

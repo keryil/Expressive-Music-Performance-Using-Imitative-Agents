@@ -2,6 +2,8 @@
 Created on Jan 11, 2012
 
 @author: kerem
+
+This module implements the LBDM by Combouropoulos 2001
 '''
 import math
 from tools import log
@@ -10,6 +12,10 @@ logger = None
 __strength = lambda f, s, m: (min(m, (math.fabs(f - s)))) / float(f + s) 
 
 def lbdm(midi):
+    """
+    Receives a monophonic melody of N notes in MIDI format, and returns a list of size N-1 representing the 
+    boundary strengths of note intervals.
+    """
     pitch = __lbdm_pitch(midi)
     ioi = __lbdm_ioi(midi)
     rest = __lbdm_rest(midi)

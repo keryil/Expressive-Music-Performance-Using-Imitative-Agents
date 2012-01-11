@@ -7,7 +7,8 @@ from imap.agent import Agent
 import random
 from copy import copy
 import pp
-from tools import miditools, logtools
+from tools import midi as mid
+from tools import log
 import logging
 import time
 
@@ -21,9 +22,9 @@ class Simulation(object):
     
     
     def __init__(self):
-        self.midi = miditools.prepare_initial_midi(self.defaultTempo)
+        self.midi = mid.prepare_initial_midi("../../res/midi_text.txt","../../res/sample.midi",self.defaultTempo)
         self.__jobServer = pp.Server()
-        self.__logger = logtools.get_logger(__name__)
+        self.__logger = log.get_logger(__name__)
     
     def reset(self, numberOfAgents=3):
         """
@@ -56,13 +57,11 @@ class Simulation(object):
         for agent in agents:
             # make the agent perform
             output = agent.perform()
-            time.sleep(1)
             
             # let all other agents evaluate the performance
             for a in agents:
                 if a is not agent:
                     a.listen(output)
-                    time.sleep(1)
             
 
 if __name__ == '__main__':

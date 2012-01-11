@@ -4,7 +4,7 @@ Created on 10 Oca 2012
 @author: Kerem
 '''
 from midiutil.MidiFile import MIDIFile
-from tools import logtools
+from tools import log
 
 class Agent(object):
     '''
@@ -18,7 +18,7 @@ class Agent(object):
         Constructor
         '''
         self.id = id
-        self.__logger = logtools.get_agent_logger(__name__, id)
+        self.__logger = log.get_agent_logger(__name__, id)
 #        logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level="INFO")
         
     def perform(self):

@@ -7,6 +7,7 @@ This module implements the LBDM by Combouropoulos 2001
 '''
 import math
 from tools import log
+from tools.analysis.key_change import midi_to_note
 logger = None
 
 __strength = lambda f, s, m: (min(m, (math.fabs(f - s)))) / float(f + s) 
@@ -21,7 +22,10 @@ def lbdm(midi):
     rest = __lbdm_rest(midi)
     boundaryStrengths = []
     for p, i, r in zip(pitch, ioi, rest):
-        boundaryStrengths.append(0.25 * (p + i + r))
+        boundaryStrengths.append(0.25 * p + 0.25 * i + 0.25 * r)
+    
+    # make sure we have boundaries at the two ends
+    boundaryStrengths[0] = boundaryStrengths[-1] = max(boundaryStrengths)
     return boundaryStrengths
 
 def __lbdm_pitch(midi):
@@ -95,6 +99,10 @@ def __lbdm_ioi(midi):
     # last strength also calculated separately
     s = __strength(intervals[-2], intervals[-1], max_ioi) * intervals[-1] 
     boundaryStrengths.append(s)
+    
+    # scale to 0-12
+    boundaryStrengths = map(lambda x: x * 12 / max_ioi,boundaryStrengths)
+        
     return boundaryStrengths
 
 def __lbdm_rest(midi):
@@ -126,7 +134,7 @@ def __lbdm_rest(midi):
             (__strength(firstInterval, secondInterval, max_ioi) + \
              __strength(secondInterval, thirdInterval, max_ioi))
         boundaryStrengths.append(boundaryStrength)
-        logger.debug("Interval: %f, Prev: %f, Next: %f, Strength: %f" % (secondInterval, firstInterval, secondInterval, boundaryStrength))
+        logger.debug("Interval: %f, Prev: %f, Next: %f, Strength: %f" % (secondInterval, firstInterval, thirdInterval, boundaryStrength))
     # last strength also calculated separately
     s = __strength(intervals[-2], intervals[-1], max_ioi) * intervals[-1] 
     boundaryStrengths.append(s)
@@ -134,8 +142,24 @@ def __lbdm_rest(midi):
 
 if __name__ == "__main__":
     from tools import midi as mid
+    from matplotlib import pyplot as plt
     midi = mid.prepare_initial_midi("../../../res/midi_text.txt", "../../../res/sample.midi", 15200)
     print __lbdm_pitch(midi)
     print __lbdm_ioi(midi)
     print __lbdm_rest(midi)
-    print lbdm(midi)
+    lbdm = lbdm(midi)
+    plt.plot(range(1, len(lbdm) + 1),lbdm)
+    plt.xticks(range(1,len(lbdm)))
+    plt.plot(range(len(lbdm)),[sum(lbdm)/len(lbdm)] * len(lbdm))
+    
+    axes = plt.axes()
+    track = midi.tracks[0]
+    noteList = [noteEvent for noteEvent in track.eventList if noteEvent.type == "note"]
+    for i in range(1,len(noteList) + 1):
+        try:
+            axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, lbdm[i-1]))
+        except IndexError, err:
+            axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, sum(lbdm)/len(lbdm)))
+    
+    
+    plt.show()

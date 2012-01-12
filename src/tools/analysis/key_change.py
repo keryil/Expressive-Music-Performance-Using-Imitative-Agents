@@ -61,7 +61,7 @@ def analyze_key_change(midi):
             relevantNotes = notes_in_measure(noteList, i, i+960)
             newCorr = correlate(key_vectors[referenceKey],durations_to_array(get_durations(relevantNotes, i+960)))
             keyChange[i/960] = newCorr - referenceCorr
-        print "Key change: ", keyChange
+    logger.info( "Key change: %s" % (keyChange))
     return keyChange
 
 def notes_in_measure(noteList, start, end):
@@ -98,7 +98,6 @@ def get_durations(noteList, end):
         duration = min(note.duration, end - note.time)
         durations[midi_to_note(note.pitch)] += duration
     total_duration = sum(durations.values())
-    print durations, end
     durations = {note:(dur/total_duration) for note, dur in durations.items()}
     return durations
 

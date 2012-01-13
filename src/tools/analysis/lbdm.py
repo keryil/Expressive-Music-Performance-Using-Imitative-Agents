@@ -9,6 +9,7 @@ import math
 from tools import log
 from tools.analysis.key_change import midi_to_note
 from copy import copy
+from matplotlib.lines import Line2D
 logger = None
 
 __strength = lambda f, s, m: (min(m, (math.fabs(f - s)))) / float(f + s) 
@@ -30,13 +31,18 @@ def lbdm(midi):
     return boundaryStrengths
 
 def getNoteGroups(midi):
+    """
+    Receives a monophonic melody of N notes, and returns a grouping of them in format 
+    [[[first_part],turning_point,[second_part]],[[first_part], turning_point, [second_part]]]
+    based on their LBDM scores
+    """
     boundaryStrengths = lbdm(midi)
     track = midi.tracks[0]
     avg_strength = sum(boundaryStrengths) / len(boundaryStrengths)
     groups = []
     current_group = []
     noteList = [noteEvent for noteEvent in track.eventList if noteEvent.type == "note"]
-    print len(boundaryStrengths), len(noteList)
+#    print len(boundaryStrengths), len(noteList)
     for i in range(len(noteList)):
         note = noteList[i]
         if current_group == []:
@@ -53,7 +59,30 @@ def getNoteGroups(midi):
             current_group.append(note)
     if current_group != []:
         groups.append(current_group)
-    return groups
+    
+    detailedGroups = []
+    firstNoteOfGroup = 0
+    for group in groups:
+        first = []
+        last = []
+        firstStrength = 0.
+        turningPointIndex = boundaryStrengths.index(max(boundaryStrengths[firstNoteOfGroup:firstNoteOfGroup + len(group) - 1]), firstNoteOfGroup)
+        turningPoint = noteList[turningPointIndex]
+#        foundTurningPoint = False
+        for i in range(len(group)):
+            if firstNoteOfGroup + i < turningPointIndex:
+                first.append(note)
+            elif firstNoteOfGroup + i > turningPointIndex:
+                last.append(note)
+                
+        firstNoteOfGroup += len(group) - 1
+        detailedGroups.append([first, turningPoint, last])
+                
+                
+            
+            
+        
+    return detailedGroups
 
 def __lbdm_pitch(midi):
     global logger
@@ -178,19 +207,39 @@ if __name__ == "__main__":
     print __lbdm_ioi(midi)
     print __lbdm_rest(midi)
     strengths = lbdm(midi)
+    groups = getNoteGroups(midi)
+    groupMarkers = []
+    turningPointMarkers = []
+    markerCounter = 0.5
+    for group in groups:
+        markerCounter += len(group[0]) + len(group[2]) + 1
+        turningPointMarkers.append(markerCounter - 0.5 - len(group[2]))
+        groupMarkers.append(markerCounter)
+        
+        
     plt.plot(range(1, len(strengths) + 1),strengths)
     plt.xticks(range(1,len(strengths)))
     plt.plot(range(len(strengths)),[sum(strengths)/len(strengths)] * len(strengths))
     
+    
     axes = plt.axes()
     track = midi.tracks[0]
     noteList = [noteEvent for noteEvent in track.eventList if noteEvent.type == "note"]
-    print [[midi_to_note(note.pitch) for note in group] for group in getNoteGroups(midi)]
+#    print [[midi_to_note(note.pitch) for note in group] for group in getNoteGroups(midi)]
+    print getNoteGroups(midi)
     for i in range(1,len(noteList) + 1):
         try:
             axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, strengths[i-1]))
         except IndexError, err:
             axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, sum(strengths)/len(strengths)))
     
-    
+    for marker in turningPointMarkers:
+#        print marker
+        plt.axvline(x = marker, color="y")
+        
+    for marker in groupMarkers:
+#        print marker
+#        axes.add_line(Line2D(xdata=[marker]*3, ydata=[0,1,2]))
+        plt.axvline(x=marker, color="r", linewidth=2)
+        
     plt.show()

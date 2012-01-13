@@ -8,6 +8,7 @@ This module implements the LBDM by Combouropoulos 2001
 import math
 from tools import log
 from tools.analysis.key_change import midi_to_note
+from copy import copy
 logger = None
 
 __strength = lambda f, s, m: (min(m, (math.fabs(f - s)))) / float(f + s) 
@@ -22,11 +23,37 @@ def lbdm(midi):
     rest = __lbdm_rest(midi)
     boundaryStrengths = []
     for p, i, r in zip(pitch, ioi, rest):
-        boundaryStrengths.append(0.25 * p + 0.25 * i + 0.25 * r)
+        boundaryStrengths.append(0.25 * p + 0.50 * i + 0.25 * r)
     
     # make sure we have boundaries at the two ends
-    boundaryStrengths[0] = boundaryStrengths[-1] = max(boundaryStrengths)
+#    boundaryStrengths[0] = boundaryStrengths[-1] = max(boundaryStrengths)
     return boundaryStrengths
+
+def getNoteGroups(midi):
+    boundaryStrengths = lbdm(midi)
+    track = midi.tracks[0]
+    avg_strength = sum(boundaryStrengths) / len(boundaryStrengths)
+    groups = []
+    current_group = []
+    noteList = [noteEvent for noteEvent in track.eventList if noteEvent.type == "note"]
+    print len(boundaryStrengths), len(noteList)
+    for i in range(len(noteList)):
+        note = noteList[i]
+        if current_group == []:
+            current_group.append(note)
+        elif len(current_group) < 4:
+            current_group.append(note)
+        elif i == len(boundaryStrengths):
+            current_group.append(note)
+        elif boundaryStrengths[i] > avg_strength:
+#            current_group.append(note)
+            groups.append(copy(current_group))
+            current_group = [note]
+        else:
+            current_group.append(note)
+    if current_group != []:
+        groups.append(current_group)
+    return groups
 
 def __lbdm_pitch(midi):
     global logger
@@ -63,7 +90,8 @@ def __lbdm_pitch(midi):
     # last strength also calculated separately
     s = __strength(intervals[-2], intervals[-1], 12) * intervals[-1]
     boundaryStrengths.append(s)
-        
+    # scale to 0-1
+    boundaryStrengths = map(lambda x: x / max(boundaryStrengths),boundaryStrengths)    
     return boundaryStrengths
 
 def __lbdm_ioi(midi):
@@ -100,8 +128,8 @@ def __lbdm_ioi(midi):
     s = __strength(intervals[-2], intervals[-1], max_ioi) * intervals[-1] 
     boundaryStrengths.append(s)
     
-    # scale to 0-12
-    boundaryStrengths = map(lambda x: x * 12 / max_ioi,boundaryStrengths)
+    # scale to 0-1
+    boundaryStrengths = map(lambda x: x / max_ioi,boundaryStrengths)
         
     return boundaryStrengths
 
@@ -113,7 +141,7 @@ def __lbdm_rest(midi):
     noteList = [noteEvent for noteEvent in track.eventList if noteEvent.type == "note"]
     boundaryStrengths = []
     intervals = []
-    max_ioi = noteList[0].duration
+    max_rest = noteList[0].duration
     
     for i in range(len(noteList) - 1):
         first_note = noteList[i]
@@ -124,20 +152,22 @@ def __lbdm_rest(midi):
         logger.debug("second: p:%d t:%f d:%f v:%d" % (second_note.pitch, second_note.time, second_note.duration, second_note.volume))
         logger.debug("Interval: %f" % interval)
     # first strength is calculated separately since it has no preceding interval
-    s = __strength(intervals[0], intervals[1], max_ioi) * intervals[0]
+    s = __strength(intervals[0], intervals[1], max_rest) * intervals[0]
     boundaryStrengths.append(s)
     for i in range(len(intervals) - 2):
         firstInterval = intervals[i]
         secondInterval = intervals[i+1]
         thirdInterval = intervals[i+2]
         boundaryStrength = secondInterval * \
-            (__strength(firstInterval, secondInterval, max_ioi) + \
-             __strength(secondInterval, thirdInterval, max_ioi))
+            (__strength(firstInterval, secondInterval, max_rest) + \
+             __strength(secondInterval, thirdInterval, max_rest))
         boundaryStrengths.append(boundaryStrength)
         logger.debug("Interval: %f, Prev: %f, Next: %f, Strength: %f" % (secondInterval, firstInterval, thirdInterval, boundaryStrength))
     # last strength also calculated separately
-    s = __strength(intervals[-2], intervals[-1], max_ioi) * intervals[-1] 
+    s = __strength(intervals[-2], intervals[-1], max_rest) * intervals[-1] 
     boundaryStrengths.append(s)
+    # scale to 0-1
+    boundaryStrengths = map(lambda x: x / max_rest,boundaryStrengths)
     return boundaryStrengths
 
 if __name__ == "__main__":
@@ -147,19 +177,20 @@ if __name__ == "__main__":
     print __lbdm_pitch(midi)
     print __lbdm_ioi(midi)
     print __lbdm_rest(midi)
-    lbdm = lbdm(midi)
-    plt.plot(range(1, len(lbdm) + 1),lbdm)
-    plt.xticks(range(1,len(lbdm)))
-    plt.plot(range(len(lbdm)),[sum(lbdm)/len(lbdm)] * len(lbdm))
+    strengths = lbdm(midi)
+    plt.plot(range(1, len(strengths) + 1),strengths)
+    plt.xticks(range(1,len(strengths)))
+    plt.plot(range(len(strengths)),[sum(strengths)/len(strengths)] * len(strengths))
     
     axes = plt.axes()
     track = midi.tracks[0]
     noteList = [noteEvent for noteEvent in track.eventList if noteEvent.type == "note"]
+    print [[midi_to_note(note.pitch) for note in group] for group in getNoteGroups(midi)]
     for i in range(1,len(noteList) + 1):
         try:
-            axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, lbdm[i-1]))
+            axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, strengths[i-1]))
         except IndexError, err:
-            axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, sum(lbdm)/len(lbdm)))
+            axes.annotate("%s" % midi_to_note(noteList[i-1].pitch), xy = (i, sum(strengths)/len(strengths)))
     
     
     plt.show()

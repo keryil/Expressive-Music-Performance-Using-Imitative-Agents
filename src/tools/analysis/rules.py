@@ -166,8 +166,76 @@ def rule3(noteList, nominal_volume, accentuation_curve):
             score += 1
     return score
 
-def rule4():
-    pass
+#def rule4():
+#    pass
+
+def rule4_tempo(notes, accentuation_curve, nominal_tempo, tempo_events):
+    score = 0
+    accentuated_note_indexes = []
+    for i in range(len(accentuation_curve))[1:-1]:
+        prev = accentuation_curve[i-1]
+        nex = accentuation_curve[i+1]
+        this = accentuation_curve[i]
+        if this >= prev and this >= nex:
+            accentuated_note_indexes.append(i)
+    
+    for i in accentuated_note_indexes:
+        prev_tempo = None
+        prev_note = notes[i-1]
+        for time, temp in tempo_events:
+            if time <= prev_note.time:
+                prev_tempo = temp
+            if time == prev_note.time:
+                break
+        prev_dev = prev_tempo - nominal_tempo
+        
+        
+        tempo = None
+        note = notes[i]
+        for time, temp in tempo_events:
+            if time <= note.time:
+                tempo = temp
+            if time == note.time:
+                break
+        dev = tempo - nominal_tempo
+        
+        next_tempo = None
+        next_note = notes[i+1]
+        for time, temp in tempo_events:
+            if time <= next_note.time:
+                next_tempo = temp
+            if time == next_note.time:
+                break
+        next_dev = next_tempo - nominal_tempo
+        if dev < next_dev and dev < prev_dev:
+            score += 1
+            
+    return score
+
+def rule4_loudness(notes,accentuation_curve, nominal_volume):
+    score = 0
+    accentuated_note_indexes = []
+    for i in range(len(accentuation_curve))[1:-1]:
+        prev = accentuation_curve[i-1]
+        nex = accentuation_curve[i+1]
+        this = accentuation_curve[i]
+        if this >= prev and this >= nex:
+            accentuated_note_indexes.append(i)
+    
+    for i in accentuated_note_indexes:
+        prev_note = notes[i-1]
+        prev_dev = prev_note.volume - nominal_volume
+        
+        note = notes[i]
+        dev = note.volume - nominal_volume
+        
+        next_note = notes[i+1]
+        next_dev = next_note.volume - nominal_volume
+        if dev < next_dev and dev < prev_dev:
+            score += 1
+            
+    return score
+
 def rule5(group_structure, nominal_tempo, tempo_events):
     score = 0
     for i in range(len(group_structure)):
@@ -231,5 +299,7 @@ if __name__ == '__main__':
     print "Rule 1 loudness: %d" % rule1_loudness(group_structure, nominal_loudness)
     print "Rule 2: %d" % rule2(group_structure, nominal_tempo, tempo_events)
     print "Rule 3: %d" % rule3(notes, nominal_loudness, accentuation)
+    print "Rule 4 tempo: %d" % rule4_tempo(notes, accentuation, nominal_tempo, tempo_events)
+    print "Rule 4 loudness: %d" % rule4_loudness(notes, accentuation, nominal_loudness)
     print "Rule 5: %d" % rule5(group_structure, nominal_tempo, tempo_events)
 #    accentuation_curve(melodic_accent.analyze_melodic_accent(performance), metric_scores, key_change.analyze_key_change(performance), [note for note in performance.tracks[0].eventList if note.type == "note"])

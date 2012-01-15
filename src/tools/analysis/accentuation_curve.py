@@ -42,7 +42,22 @@ def accentuation_curve(melodic_accent, metrical_scores, key_change, notes, maxVa
 #    print keys_final
 #    print accentuation_curve
 
-#    from matplotlib import pyplot as plt
-#    plt.plot(range(len(accentuation_curve)), accentuation_curve)
-#    plt.show()
+
     return accentuation_curve
+
+if __name__ == "__main__":
+    from tools import midi as mid
+    from tools.analysis import lbdm, metric_structure, melodic_accent, key_change
+    performance = mid.prepare_initial_midi("../../../res/midi_text.txt", "../../../res/sample.midi", 15200)
+    group_structure = lbdm.getNoteGroups(performance)
+    tempo_events = [(event.time, event.tempo) for event in performance.tracks[0].eventList if event.type == "tempo"]
+    notes = [event for event in performance.tracks[0].eventList if event.type == "note"]
+    nominal_tempo = 3947
+    nominal_loudness = 100
+    melodic_accent = melodic_accent.analyze_melodic_accent(performance)
+    metric_structure, metrical_scores = metric_structure.getMetricStructure(performance)
+    key = key_change.analyze_key_change(performance)
+    accentuation = accentuation_curve(melodic_accent, metrical_scores, key, notes)
+    from matplotlib import pyplot as plt
+    plt.plot(range(len(accentuation)), accentuation)
+    plt.show()

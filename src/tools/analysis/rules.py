@@ -154,6 +154,30 @@ def rule2(group_structure, nominal_tempo, tempo_events):
     return score
 
 def rule3(noteList, nominal_volume, accentuation_curve):
+    """
+    Rule 3: Loudness Emphasis
+    Performance deviations for loudness should emphasise the metrical, 
+    melodic, and harmonic structure (Clarke 1988; Sundberg et al. 1983).
+    
+    So, for each successful expression, we should expect 2 points. 
+    Take midi_rule3_sample.txt: 
+    
+    >>> performance = mid.prepare_initial_midi("../../../res/midi_rule3_text.txt", "../../../res/sample_rule3.midi", 15200)
+    >>> group_structure = lbdm.getNoteGroups(performance)
+    >>> tempo_events = [(event.time, event.tempo) for event in performance.tracks[0].eventList if event.type == "tempo"]
+    >>> notes = [event for event in performance.tracks[0].eventList if event.type == "note"]
+    >>> nominal_loudness = 100
+    >>> melodic_accent = melodic_accent.analyze_melodic_accent(performance)
+    >>> metric_structure, metrical_scores = metric_structure.getMetricStructure(performance)
+    >>> key = key_change.analyze_key_change(performance)
+    >>> accentuation = accentuation_curve.accentuation_curve(melodic_accent, metrical_scores, key, notes)
+    
+    There are 2 increases in volume for two
+    accentuated notes,so we should expect a score of 4.
+    
+    >>> rule3(notes, nominal_loudness, accentuation)
+    4
+    """
     assert len(noteList) == len(accentuation_curve)
     score = 0
     for i in range(len(noteList) - 1):
@@ -169,6 +193,11 @@ def rule3(noteList, nominal_volume, accentuation_curve):
 #    pass
 
 def rule4_tempo(notes, accentuation_curve, nominal_tempo, tempo_events):
+    """
+    Rule 4: Accentuation
+    Any note at a significantly accentuated position (as defined later) must either 
+    have a lengthened duration value or a local loudness maximum (Clarke 1988; Cambouropoulos 2001).
+    """
     score = 0
     accentuated_note_indexes = []
     for i in range(len(accentuation_curve))[1:-1]:
@@ -212,6 +241,11 @@ def rule4_tempo(notes, accentuation_curve, nominal_tempo, tempo_events):
     return score
 
 def rule4_loudness(notes,accentuation_curve, nominal_volume):
+    """
+    Rule 4: Accentuation
+    Any note at a significantly accentuated position (as defined later) must either 
+    have a lengthened duration value or a local loudness maximum (Clarke 1988; Cambouropoulos 2001).
+    """
     score = 0
     accentuated_note_indexes = []
     for i in range(len(accentuation_curve))[1:-1]:
@@ -236,6 +270,11 @@ def rule4_loudness(notes,accentuation_curve, nominal_volume):
     return score
 
 def rule5(group_structure, nominal_tempo, tempo_events):
+    """
+    Rule 5: Boundary Notes
+    The last note in a note grouping should have an expressive 
+    tempo, which is either a local minimum or local maximum (Clarke 1988).
+    """
     score = 0
     for i in range(len(group_structure)):
         group = group_structure[i]
@@ -284,7 +323,12 @@ def rule5(group_structure, nominal_tempo, tempo_events):
     return score
     
 if __name__ == '__main__':
-    performance = mid.prepare_initial_midi("../../../res/midi_text.txt", "../../../res/sample.midi", 15200)
+#    performance = mid.prepare_initial_midi("../../../res/midi_text.txt", "../../../res/sample.midi", 15200)
+    import doctest
+    doctest.testmod()
+    exit()
+    
+    performance = mid.prepare_initial_midi("../../../res/midi_rule3_text.txt", "../../../res/sample_rule3.midi", 15200)
     group_structure = lbdm.getNoteGroups(performance)
     tempo_events = [(event.time, event.tempo) for event in performance.tracks[0].eventList if event.type == "tempo"]
     notes = [event for event in performance.tracks[0].eventList if event.type == "note"]

@@ -6,7 +6,8 @@ Created on 15 Oca 2012
 
 #from math import fabs as abs
 from tools import midi as mid
-from tools.analysis import lbdm, melodic_accent, metric_structure, key_change
+from tools.analysis import lbdm, melodic_accent, metric_structure, key_change,\
+    accentuation_curve
 from tools.analysis.key_change import note_find_measure
 
 

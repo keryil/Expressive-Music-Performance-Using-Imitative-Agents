@@ -20,6 +20,13 @@ def accentuation_curve(melodic_accent, metrical_scores, key_change, notes, maxVa
     
     accents = [float(accent) * maxVal / max(melodic_accent) for accent in melodic_accent]
     metrics = [float(score) * maxVal / float(max(metrical_scores)) for score in metrical_scores]
+    
+    try:
+        assert len(accents) == len(metrics)
+    except AssertionError:
+        print len(accents), accents
+        print len(metrics), metrics
+        exit(1)
     keys = [float(change) * maxVal / max(keys) for change in keys]
 #    print melodic_accent
 #    print accents
@@ -42,7 +49,7 @@ def accentuation_curve(melodic_accent, metrical_scores, key_change, notes, maxVa
 #    print keys_final
 #    print accentuation_curve
 
-
+    
     return accentuation_curve
 
 if __name__ == "__main__":

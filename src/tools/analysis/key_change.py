@@ -17,7 +17,14 @@ rotate_array = lambda x,t: x[-t:] + x[:-t]
 midi_to_note = lambda x: notes[x % 12]
 notes_in_measure =  lambda n, s, e: [note for note in n if (note.time >= s) and (note.time < e)]
 durations_to_array = lambda d: [d[note] for note in notes]
+measure_duration = 960
 
+# return true if note n is in measure m
+note_in_measure = lambda n, m: (n.time >= measure_duration * m) and (n.time < measure_duration * (m+1))
+
+from math import floor
+note_find_measure = lambda n: int(floor(n.time / measure_duration))
+                                 
 # 24 12-dimensional vectors, one for each major/minor key
 key_vectors = {"C Major": CMaj, "C Minor": CMin}
 for i in range(len(notes))[1:]:
@@ -42,25 +49,25 @@ def analyze_key_change(midi):
     keyChange = [0. for i in range(6)]
     
     # process measure by measure
-    for i in range(0,6*960,960):
+    for i in range(0,6*measure_duration,measure_duration):
         # first measure
         if i == 0:
             continue
 #            relevantNotes = notes_in_measure(noteList, i, i+960)
 #            keys.append(determine_key(relevantNotes))
         #second measure
-        elif i == 960:
-            referenceNotes = notes_in_measure(noteList, i-960,i)
+        elif i == measure_duration:
+            referenceNotes = notes_in_measure(noteList, i-measure_duration,i)
             referenceKey, referenceCorr = determine_key(referenceNotes, i)
-            relevantNotes = notes_in_measure(noteList, i, i+960)
-            newCorr = correlate(key_vectors[referenceKey],durations_to_array(get_durations(relevantNotes, i+960)))
-            keyChange[i/960] = newCorr - referenceCorr
+            relevantNotes = notes_in_measure(noteList, i, i+measure_duration)
+            newCorr = correlate(key_vectors[referenceKey],durations_to_array(get_durations(relevantNotes, i+measure_duration)))
+            keyChange[i/measure_duration] = newCorr - referenceCorr
         else:
-            referenceNotes = notes_in_measure(noteList, i-2*960,i)
+            referenceNotes = notes_in_measure(noteList, i-2*measure_duration,i)
             referenceKey, referenceCorr = determine_key(referenceNotes, i)
-            relevantNotes = notes_in_measure(noteList, i, i+960)
-            newCorr = correlate(key_vectors[referenceKey],durations_to_array(get_durations(relevantNotes, i+960)))
-            keyChange[i/960] = newCorr - referenceCorr
+            relevantNotes = notes_in_measure(noteList, i, i+measure_duration)
+            newCorr = correlate(key_vectors[referenceKey],durations_to_array(get_durations(relevantNotes, i+measure_duration)))
+            keyChange[i/measure_duration] = newCorr - referenceCorr
     logger.info( "Key change: %s" % (keyChange))
     return keyChange
 

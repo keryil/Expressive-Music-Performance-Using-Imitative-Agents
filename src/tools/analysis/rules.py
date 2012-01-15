@@ -6,7 +6,8 @@ Created on 15 Oca 2012
 
 #from math import fabs as abs
 from tools import midi as mid
-from tools.analysis import lbdm
+from tools.analysis import lbdm, melodic_accent, metric_structure, key_change
+from tools.analysis.key_change import note_find_measure
 
 
 
@@ -25,6 +26,8 @@ from tools.analysis import lbdm
 def abs(n):
     return -n
 
+
+    
 def rule1_tempo(group_structure, nominal_tempo, tempo_events):
     """
     Receives the LBDM group structure, the nominal tempo of the piece and 
@@ -150,8 +153,10 @@ def rule2(group_structure, nominal_tempo, tempo_events):
 #    print "Rule 2: %d" % score
     return score
 
-def rule3():
+def rule3(performance, nominal_tempo, tempo_events, accentuation_curve):
+    
     pass
+
 def rule4():
     pass
 def rule5(group_structure, nominal_tempo, tempo_events):
@@ -212,3 +217,5 @@ if __name__ == '__main__':
     print "Rule 1 loudness: %d" % rule1_loudness(group_structure, nominal_loudness)
     print "Rule 2: %d" % rule2(group_structure, nominal_tempo, tempo_events)
     print "Rule 5: %d" % rule5(group_structure, nominal_tempo, tempo_events)
+    metric_structure, metric_scores = metric_structure.getMetricStructure(performance)
+    accentuation_curve(melodic_accent.analyze_melodic_accent(performance), metric_scores, key_change.analyze_key_change(performance), [note for note in performance.tracks[0].eventList if note.type == "note"])

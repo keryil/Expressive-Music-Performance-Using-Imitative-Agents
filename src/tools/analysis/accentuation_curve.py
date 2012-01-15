@@ -42,7 +42,7 @@ def accentuation_curve(melodic_accent, metrical_scores, key_change, notes, maxVa
 #    print keys_final
 #    print accentuation_curve
 
-    from matplotlib import pyplot as plt
-    plt.plot(range(len(accentuation_curve)), accentuation_curve)
-    plt.show()
+#    from matplotlib import pyplot as plt
+#    plt.plot(range(len(accentuation_curve)), accentuation_curve)
+#    plt.show()
     return accentuation_curve

@@ -6,7 +6,8 @@ Created on 15 Oca 2012
 
 #from math import fabs as abs
 from tools import midi as mid
-from tools.analysis import lbdm, melodic_accent, metric_structure, key_change
+from tools.analysis import lbdm, melodic_accent, metric_structure, key_change,\
+    accentuation_curve
 from tools.analysis.key_change import note_find_measure
 
 
@@ -153,9 +154,17 @@ def rule2(group_structure, nominal_tempo, tempo_events):
 #    print "Rule 2: %d" % score
     return score
 
-def rule3(performance, nominal_tempo, tempo_events, accentuation_curve):
-    
-    pass
+def rule3(noteList, nominal_volume, accentuation_curve):
+    assert len(noteList) == len(accentuation_curve)
+    score = 0
+    for i in range(len(noteList) - 1):
+        lambda_d = accentuation_curve[i+1] - accentuation_curve[i]
+        next_loudness_dev = noteList[i+1].volume - nominal_volume
+        loudness_dev= noteList[i].volume - nominal_volume
+        lambda_dev = next_loudness_dev - loudness_dev
+        if lambda_dev * lambda_d > 0:
+            score += 1
+    return score
 
 def rule4():
     pass
@@ -211,11 +220,16 @@ if __name__ == '__main__':
     performance = mid.prepare_initial_midi("../../../res/midi_text.txt", "../../../res/sample.midi", 15200)
     group_structure = lbdm.getNoteGroups(performance)
     tempo_events = [(event.time, event.tempo) for event in performance.tracks[0].eventList if event.type == "tempo"]
+    notes = [event for event in performance.tracks[0].eventList if event.type == "note"]
     nominal_tempo = 3947
     nominal_loudness = 100
+    melodic_accent = melodic_accent.analyze_melodic_accent(performance)
+    metric_structure, metrical_scores = metric_structure.getMetricStructure(performance)
+    key = key_change.analyze_key_change(performance)
+    accentuation = accentuation_curve.accentuation_curve(melodic_accent, metrical_scores, key, notes)
     print "Rule 1 tempo: %d" % rule1_tempo(group_structure, nominal_tempo, tempo_events)
     print "Rule 1 loudness: %d" % rule1_loudness(group_structure, nominal_loudness)
     print "Rule 2: %d" % rule2(group_structure, nominal_tempo, tempo_events)
+    print "Rule 3: %d" % rule3(notes, nominal_loudness, accentuation)
     print "Rule 5: %d" % rule5(group_structure, nominal_tempo, tempo_events)
-    metric_structure, metric_scores = metric_structure.getMetricStructure(performance)
-    accentuation_curve(melodic_accent.analyze_melodic_accent(performance), metric_scores, key_change.analyze_key_change(performance), [note for note in performance.tracks[0].eventList if note.type == "note"])
+#    accentuation_curve(melodic_accent.analyze_melodic_accent(performance), metric_scores, key_change.analyze_key_change(performance), [note for note in performance.tracks[0].eventList if note.type == "note"])

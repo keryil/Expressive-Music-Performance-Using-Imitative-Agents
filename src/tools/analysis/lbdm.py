@@ -9,7 +9,6 @@ import math
 from tools import log
 from tools.analysis.key_change import midi_to_note
 from copy import copy
-from matplotlib.lines import Line2D
 logger = None
 
 __strength = lambda f, s, m: (min(m, (math.fabs(f - s)))) / float(f + s) 

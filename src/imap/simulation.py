@@ -28,7 +28,7 @@ class Simulation(object):
     __jobServer = None
     __logger = None
     weight_tempo, weight_loudness, weight_tempo_rules, weight_loudness_rules = \
-        1,0,{"rule1":1.0,"rule2":0.,"rule4":0.,"rule5":0.},{"rule1":0.0,"rule3":0.,"rule4":0.}
+        1.,0.,{"rule1":1.0,"rule2":0.,"rule4":0.,"rule5":0.},{"rule1":0.0,"rule3":0.,"rule4":0.}
     
     def __init__(self):
         self.midi = mid.prepare_initial_midi("../../res/midi_text.txt", "../../res/sample.midi", self.defaultTempo)
@@ -40,7 +40,7 @@ class Simulation(object):
         Initializes the simulation with the set number of agents and sets Simulation.resetDone = True. Should be called 
         before starting any simulation run. 
         """
-        self.agents = [Agent(i, self.weight_tempo, self.weight_loudness, self.weight_tempo_rules, self.weight_loudness_rules, self.midi) for i in range(numberOfAgents)]
+        self.agents = [Agent(i, self.weight_tempo, self.weight_loudness, self.weight_tempo_rules, self.weight_loudness_rules, self.midi, self.defaultTempo, self.defaultVolume) for i in range(numberOfAgents)]
         self.resetDone = True
         self.__logger.info("Reset.")
     

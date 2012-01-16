@@ -40,7 +40,15 @@ class Simulation(object):
         Initializes the simulation with the set number of agents and sets Simulation.resetDone = True. Should be called 
         before starting any simulation run. 
         """
-        self.agents = [Agent(i, self.weight_tempo, self.weight_loudness, self.weight_tempo_rules, self.weight_loudness_rules, self.midi, self.defaultTempo, self.defaultVolume) for i in range(numberOfAgents)]
+        self.agents = []
+        for i in range(numberOfAgents):
+            new_midi = mid.prepare_initial_midi("../../res/midi_text.txt", "../../res/sample%d.midi" % i, self.defaultTempo)
+            notes = [event for event in new_midi.tracks[0].eventList if event.type == "note"]
+            for note in notes:
+                note.volume = self.defaultVolume + random.random() * 0.5 + 0.75
+                new_midi.tracks[0].addTempo(note.time, self.defaultTempo + random.random() * 0.75 + 0.55)
+            
+            self.agents.append(Agent(i, self.weight_tempo, self.weight_loudness, self.weight_tempo_rules, self.weight_loudness_rules, new_midi, self.defaultTempo, self.defaultVolume))
         self.resetDone = True
         self.__logger.info("Reset.")
     

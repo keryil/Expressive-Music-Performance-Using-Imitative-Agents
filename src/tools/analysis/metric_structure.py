@@ -39,7 +39,7 @@ def getMetricStructure(midi, signature="2/4", quarterNoteDuration=480.):
         
         # first level should alternate
         if note.duration - quarterNoteDuration < 0.1:
-            if (int(floor(position)) % 2 == 0):
+            if (int(floor(position)) % 2 == 1):
                 total_score += 1
                 metric_structure[d][position] = 1
             else:

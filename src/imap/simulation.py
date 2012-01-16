@@ -52,7 +52,7 @@ class Simulation(object):
         self.resetDone = True
         self.__logger.info("Reset.")
     
-    def run(self, numberOfCycles=100):
+    def run(self, numberOfCycles=20):
         """
         Starts and runs the simulation by executing cycles for the given number of times.
         """

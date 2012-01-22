@@ -68,7 +68,7 @@ def analyze_key_change(midi):
             relevantNotes = notes_in_measure(noteList, i, i+measure_duration)
             newCorr = correlate(key_vectors[referenceKey],durations_to_array(get_durations(relevantNotes, i+measure_duration)))
             keyChange[i/measure_duration] = newCorr - referenceCorr
-    logger.info( "Key change: %s" % (keyChange))
+#    logger.info( "Key change: %s" % (keyChange))
     return keyChange
 
 def notes_in_measure(noteList, start, end):
@@ -109,6 +109,7 @@ def get_durations(noteList, end):
     return durations
 
 def correlate(vector1, vector2):
+#    print vector1, vector2
     vector1_average = sum(vector1)/12.
     vector2_average = sum(vector2)/12.
     nominator = 0.
@@ -119,6 +120,8 @@ def correlate(vector1, vector2):
         nominator += v1diff * v2diff
         denominator1 += v1diff ** 2
         denominator2 += v2diff ** 2
+#        print v1diff, v2diff
+#    print denominator1, denominator2
     denominator = math.sqrt(denominator1 * denominator2)
     return nominator / denominator
     

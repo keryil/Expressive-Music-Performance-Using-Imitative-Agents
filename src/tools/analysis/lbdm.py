@@ -8,7 +8,7 @@ This module implements the LBDM by Combouropoulos 2001
 import math
 from tools import log
 from tools.analysis.key_change import midi_to_note
-from copy import copy
+from copy import copy, deepcopy
 logger = None
 
 __strength = lambda f, s, m: (min(m, (math.fabs(f - s)))) / float(f + s) 
@@ -28,6 +28,26 @@ def lbdm(midi):
     # make sure we have boundaries at the two ends
 #    boundaryStrengths[0] = boundaryStrengths[-1] = max(boundaryStrengths)
     return boundaryStrengths
+
+def transferred_lbdm(original_lbdm, note_groups):
+    note_index = 0
+    new_lbdm = deepcopy(original_lbdm)
+    for group in note_groups:
+        first_part, turning_point, second_part = tuple(group)
+        lowest_lbdm = 100.
+        turning_point_index = 0
+        for n in first_part:
+            lowest_lbdm = min(original_lbdm[note_index], lowest_lbdm)
+            note_index += 1
+        turning_point_index = note_index
+        note_index += 1
+        for n in second_part:
+            if note_index == len(original_lbdm):
+                break
+            lowest_lbdm = min(original_lbdm[note_index], lowest_lbdm)
+            note_index += 1
+        new_lbdm[turning_point_index] = lowest_lbdm / 2
+    return new_lbdm
 
 def getNoteGroups(midi):
     """
@@ -214,12 +234,14 @@ if __name__ == "__main__":
         markerCounter += len(group[0]) + len(group[2]) + 1
         turningPointMarkers.append(markerCounter - 0.5 - len(group[2]))
         groupMarkers.append(markerCounter)
-        
+    t_ldbm = transferred_lbdm(lbdm(midi),groups)
         
     plt.plot(range(1, len(strengths) + 1),strengths)
+    plt.plot(range(1, len(t_ldbm) + 1),t_ldbm)
+    
     plt.xticks(range(1,len(strengths)))
     plt.plot(range(len(strengths)),[sum(strengths)/len(strengths)] * len(strengths))
-    
+    plt.plot()
     
     axes = plt.axes()
     track = midi.tracks[0]

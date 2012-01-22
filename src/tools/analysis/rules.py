@@ -27,7 +27,25 @@ from tools.analysis.key_change import note_find_measure
 def abs(n):
     return -n
 
-    
+def find_tempo_of_note(note, midi):
+        tempo = None
+        tempo_events = [(event.time, event.tempo) for event in midi.tracks[0].eventList if event.type == "tempo"]
+        for time, temp in tempo_events:
+            if time > note.time:
+                break
+            else: 
+                tempo = temp
+        return tempo
+
+def find_tempo_of_note_from_groups(note, tempo_events):
+    tempo = None
+    for time, temp in tempo_events:
+        if time > note.time:
+            break
+        else: 
+            tempo = temp
+    return tempo
+
 def rule1_tempo(group_structure, nominal_tempo, tempo_events):
     """
     Receives the LBDM group structure, the nominal tempo of the piece and 
@@ -44,29 +62,29 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             note = first[i]
             
             # find the tempo during this note
-            tempo = None
-            for time, temp in tempo_events:
-                if time <= note.time:
-                    tempo = temp
-                if time == note.time:
-                    break
-            
+            tempo = find_tempo_of_note_from_groups(note, tempo_events)
+#            for time, temp in tempo_events:
+#                if time <= note.time:
+#                    tempo = temp
+#                if time == note.time:
+#                    break
+#            
             # find the next_note note and its tempo    
             next_note = None
-            next_tempo = None
             if i == len(first):
                 next_note = turning
             else:
                 next_note = first[i + 1]
+            next_tempo = find_tempo_of_note_from_groups(next_note, tempo_events)
                 
-            for time, tempo in tempo_events:
-                if time <= next_note.time:
-                    next_tempo = tempo
-                if time == next_note.time:
-                    break
+#            for time, tempo in tempo_events:
+#                if time <= next_note.time:
+#                    next_tempo = tempo
+#                if time == next_note.time:
+#                    break
             
             # not sure about abs
-            if(abs(nominal_tempo - next_tempo) > abs(nominal_tempo - tempo)):
+            if((nominal_tempo - next_tempo) > (nominal_tempo - tempo)):
                 score += 1
         
         # process the last part
@@ -75,29 +93,24 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             note = last[i]
             
             # find the tempo during this note
-            tempo = None
-            for time, temp in tempo_events:
-                if time <= note.time:
-                    tempo = temp
-                if time == note.time:
-                    break
+            tempo = find_tempo_of_note_from_groups(note, tempo_events)
+#            for time, temp in tempo_events:
+#                if time <= note.time:
+#                    tempo = temp
+#                if time == note.time:
+#                    break
             
             # find the next_note note and its tempo    
             next_note = None
-            next_tempo = None
             if i == len(last):
                 next_note = turning
             else:
                 next_note = last[i + 1]
                 
-            for time, temp in tempo_events:
-                if time <= next_note.time:
-                    next_tempo = temp
-                if time == next_note.time:
-                    break
+            next_tempo = find_tempo_of_note_from_groups(next_note, tempo_events)
             
             # not sure about abs
-            if(abs(nominal_tempo - next_tempo) <= abs(nominal_tempo - tempo)):
+            if((nominal_tempo - next_tempo) <= (nominal_tempo - tempo)):
                 score += 1
             
     return score
@@ -121,7 +134,7 @@ def rule1_loudness(group_structure, nominal_volume):
                 next_note = first[i + 1]
                 
             # not sure about abs
-            if(abs(nominal_volume - next_note.volume) > abs(nominal_volume - note.volume)):
+            if((nominal_volume - next_note.volume) > (nominal_volume - note.volume)):
                 score += 1
         
         # process the last part
@@ -131,7 +144,7 @@ def rule1_loudness(group_structure, nominal_volume):
             next_note = last[i + 1]
             
             # not sure about abs
-            if(abs(nominal_volume - next_note.volume) <= abs(nominal_volume - note.volume)):
+            if((nominal_volume - next_note.volume) <= (nominal_volume - note.volume)):
                 score += 1
             
     return score
@@ -317,8 +330,9 @@ def rule5(group_structure, nominal_tempo, tempo_events):
                 score += 1
         # we may hit the end of the score here
         except IndexError, err:
-            print "End of score at %d?" % note.time
+#            print "End of score at %d?" % note.time
 #            print err
+            pass
         
     return score
     

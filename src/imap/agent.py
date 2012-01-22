@@ -54,12 +54,14 @@ class Agent(object):
     def getId(self):
         return self.__id
     
-    def perform(self):
-        self.__logger.debug("Performing")
+    def perform(self, cycle_no):
+#        self.__logger.info("Performing in cycle %d" % cycle_no)
+        self.feedback("performing in round %d" % (cycle_no))
         return self.performance
     
     def __listen_own(self, nominal_tempo, nominal_volume):
-        self.__logger.debug("Listening to self")
+#        self.__logger.debug("listening to self")
+        self.feedback("listening to self")
         performance = self.performance
         group_structure = getNoteGroups(performance)
         tempo_events = [(event.time, event.tempo) for event in performance.tracks[0].eventList if event.type == "tempo"]
@@ -75,13 +77,17 @@ class Agent(object):
             rule4_tempo(notes, accentuation, nominal_tempo, tempo_events), \
             rule4_loudness(notes, accentuation, nominal_volume), \
             rule5(group_structure, nominal_tempo, tempo_events)
+        print "SELF::: r1_tempo: %f, r1_loudness: %f, r2: %f, r3: %f, r4_tempo: %f, r4_loudness: %f, r5: %f" % (r1_tempo, r1_loudness, r2, r3, r4_tempo, r4_loudness, r5)
         return self.evaluate(r1_tempo, r1_loudness, r2, r3, r4_tempo, r4_loudness, r5)
         
     def listen(self, performance, rule1_tempo, rule1_loudness, rule2, rule3, rule4_tempo, rule4_loudness, rule5):
-        self.__logger.debug("Listening")
+        self.__logger.info("Listening")
+        print "r1_tempo: %f, r1_loudness: %f, r2: %f, r3: %f, r4_tempo: %f, r4_loudness: %f, r5: %f" % (rule1_tempo, rule1_loudness, rule2, rule3, rule4_tempo, rule4_loudness, rule5)
         score = self.evaluate(rule1_tempo, rule1_loudness, rule2, rule3, rule4_tempo, rule4_loudness, rule5)
+#        self.__logger.info("My score: %f, his score: %f" % (self.__self_evaluation, score))
+        self.feedback("My score: %f, his score: %f" % (self.__self_evaluation, score))
         if score > self.__self_evaluation:
-            self.__logger.info("Changing performance...")
+            self.feedback("changing performance...")
             my_notes =  [event for event in self.performance.tracks[0].eventList if event.type == "note"]
             my_tempo_events =  [(event.time, event.tempo) for event in self.performance.tracks[0].eventList if event.type == "tempo"]
             his_notes =  [event for event in performance.tracks[0].eventList if event.type == "note"]
@@ -107,17 +113,19 @@ class Agent(object):
                 his_volume = his_note.volume
                 
                 nominal_tempo = self.__nominal_tempo
-                my_tempo_delta = my_tempo - nominal_tempo
-                his_tempo_delta = his_tempo - nominal_tempo
-                new_tempo_delta = (1-self.__learningRate) * my_tempo_delta + self.__learningRate * his_tempo_delta
-                new_tempo = nominal_tempo + new_tempo_delta
+#                my_tempo_delta = my_tempo - nominal_tempo
+#                his_tempo_delta = his_tempo - nominal_tempo
+                new_tempo = int(float(his_tempo) * self.__learningRate + float(my_tempo) * (1-self.__learningRate))
+#                new_tempo_delta = new_tempo - nominal_tempo #(1-self.__learningRate) * my_tempo_delta + self.__learningRate * his_tempo_delta
                 self.performance.tracks[0].addTempo(my_note.time, new_tempo)
+                self.performance.tracks[0].addTempo(my_note.time + my_note.duration, my_tempo)
+#                self.__logger.info("Changed tempo at note %d from %d to %d" % (i, my_tempo, new_tempo))
                 
                 nominal_volume = self.__nominal_volume
-                my_volume_delta = my_volume - nominal_volume
-                his_volume_delta = his_volume - nominal_volume
-                new_volume_delta = (1-self.__learningRate) * my_volume_delta + self.__learningRate * his_volume_delta
-                new_volume = nominal_volume + new_volume_delta
+#                my_volume_delta = my_volume - nominal_volume
+#                his_volume_delta = his_volume - nominal_volume
+                new_volume = int(self.__learningRate * float(his_volume) + (self.__learningRate - 1) * float(my_volume))
+#                new_volume_delta = new_volume - nominal_volume #(1-self.__learningRate) * my_volume_delta + self.__learningRate * his_volume_delta
                 my_note.volume = new_volume
                 
             self.__self_evaluation = self.__listen_own(nominal_tempo, nominal_volume)
@@ -142,6 +150,9 @@ class Agent(object):
         return self.__evaluate_tempo(r1_tempo, r2, r4_tempo, r5) * \
             self.__weight_tempo + self.__evaluate_loudness(r1_loudness, r3, r4_loudness) * \
                 (1-self.__weight_loudness)
+    
+    def feedback(self, str):
+        print "Agent %s %s" % (self.__id, str)
     
 #    def __debug(self, message):
 #        self.__logger.debug("Agent %s |::| %s::%s" % (self.id, inspect.stack()[1][3], message))

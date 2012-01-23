@@ -9,6 +9,7 @@ from tools import midi as mid
 from tools.analysis import lbdm, melodic_accent, metric_structure, key_change,\
     accentuation_curve
 from tools.analysis.key_change import note_find_measure
+from tools.midi import translate_tempo, remove_tempo_events_at
 
 
 
@@ -62,6 +63,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             
             # find the tempo during this note
             tempo = find_tempo_from_event_tuples(note, tempo_events)
+            tempo = translate_tempo(tempo)
 #            for time, temp in tempo_events:
 #                if time <= note.time:
 #                    tempo = temp
@@ -75,7 +77,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             else:
                 next_note = first[i + 1]
             next_tempo = find_tempo_from_event_tuples(next_note, tempo_events)
-                
+            next_tempo = translate_tempo(next_tempo)
 #            for time, tempo in tempo_events:
 #                if time <= next_note.time:
 #                    next_tempo = tempo
@@ -83,8 +85,13 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
 #                    break
             
             # not sure about abs
-            if((nominal_tempo - next_tempo) > (nominal_tempo - tempo)):
+            if((next_tempo - nominal_tempo) > (tempo - nominal_tempo)):
                 score += 1
+#                print "DEBUG: tempo %f next_tempo %f satisfies the first group constraint." % (tempo, next_tempo)
+#            else:
+#                print "DEBUG: tempo %f next_tempo %f DOES NOT satisfy the first group constraint." % (tempo, next_tempo)
+#            
+#            print "DEBUG: tempo %f/%f next_tempo %f/%f" % (tempo, translate_tempo(tempo), next_tempo, translate_tempo(next_tempo))
         
         # process the last part
         last = [turning] + last
@@ -93,6 +100,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             
             # find the tempo during this note
             tempo = find_tempo_from_event_tuples(note, tempo_events)
+            tempo = translate_tempo(tempo)
 #            for time, temp in tempo_events:
 #                if time <= note.time:
 #                    tempo = temp
@@ -107,10 +115,14 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
                 next_note = last[i + 1]
                 
             next_tempo = find_tempo_from_event_tuples(next_note, tempo_events)
-            
+            next_tempo = translate_tempo(next_tempo)
             # not sure about abs
-            if((nominal_tempo - next_tempo) <= (nominal_tempo - tempo)):
+            if((next_tempo - nominal_tempo) <= (tempo - nominal_tempo)):
                 score += 1
+#                print "DEBUG: tempo %f next_tempo %f satisfies the last group constraint." % (tempo, next_tempo)
+#            else:
+#                print "DEBUG: tempo %f next_tempo %f DOES NOT satisfy the last group constraint." % (tempo, next_tempo)
+            
             
     return score
 def rule1_loudness(group_structure, nominal_volume):
@@ -119,7 +131,7 @@ def rule1_loudness(group_structure, nominal_volume):
         first = group[0]
         turning = group[1]
         last = group[2]
-        
+#        print "DEBUG:: first: %s  turning: %s  last: %s" % (first,turning,last)
         # process the first part
         for i in range(len(first) - 1):
             note = first[i]
@@ -132,22 +144,34 @@ def rule1_loudness(group_structure, nominal_volume):
             else:
                 next_note = first[i + 1]
                 
+            assert note != next_note
+#                print "note == next_note?!?!"
+#                exit(-1)
+            
             # not sure about abs
-            if((nominal_volume - next_note.volume) > (nominal_volume - note.volume)):
+            if(next_note.volume - nominal_volume) > (note.volume - nominal_volume):
                 score += 1
+                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, satisfies first group constraint" % (nominal_volume, note.volume, next_note.volume)
+            else:
+                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, DOES NOT satisfy first group constraint" % (nominal_volume, note.volume, next_note.volume)
+            
             # KEREM
 #            else:
 #                score -= 1
                 
         # process the last part
         last = [turning] + last
-        for i in range(len(last) - 1):
+        for i in range(len(last) - 2):
             note = last[i]
             next_note = last[i + 1]
             
             # not sure about abs
-            if((nominal_volume - next_note.volume) <= (nominal_volume - note.volume)):
+            if(next_note.volume - nominal_volume) <= (note.volume - nominal_volume):
                 score += 1
+                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, satisfies last group constraint" % (nominal_volume, note.volume, next_note.volume)
+            else:
+                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, DOES NOT satisfy last group constraint" % (nominal_volume, note.volume, next_note.volume)
+            
 #            else:
 #                score -= 1
                 
@@ -185,7 +209,7 @@ def rule3(noteList, nominal_volume, accentuation_curve):
     >>> notes = [event for event in performance.tracks[0].eventList if event.type == "note"]
     >>> nominal_loudness = 100
     >>> melodic_accent = melodic_accent.analyze_melodic_accent(performance)
-    >>> metric_structure, metrical_scores = metric_structure.getMetricStructure(performance)
+    >>> metric_grouping, metrical_scores = metric_grouping.getMetricStructure(performance)
     >>> key = key_change.analyze_key_change(performance)
     >>> accentuation = accentuation_curve.accentuation_curve(melodic_accent, metrical_scores, key, notes)
     
@@ -339,20 +363,24 @@ def rule5(group_structure, nominal_tempo, tempo_events):
     
 if __name__ == '__main__':
 #    performance = mid.prepare_initial_midi("../../../res/midi_text.txt", "../../../res/sample.midi", 15200)
-    import doctest
-    doctest.testmod()
-    exit()
+#    import doctest
+#    doctest.testmod()
+#    exit()
     
-    performance = mid.prepare_initial_midi("../../../res/midi_rule3_text.txt", "../../../res/sample_rule3.midi", 15200)
+    performance = mid.prepare_initial_midi("../../../res/midi_rule1_text.txt", "../../../res/sample_rule3.midi", 3947)
+    remove_tempo_events_at(720, performance)
+    performance.tracks[0].addTempo(720,3950)
+    remove_tempo_events_at(960, performance)
+    performance.tracks[0].addTempo(960,3947)
     group_structure = lbdm.getNoteGroups(performance)
     tempo_events = [(event.time, event.tempo) for event in performance.tracks[0].eventList if event.type == "tempo"]
     notes = [event for event in performance.tracks[0].eventList if event.type == "note"]
     nominal_tempo = 3947
     nominal_loudness = 100
-    melodic_accent = melodic_accent.analyze_melodic_accent(performance)
-    metric_structure, metrical_scores = metric_structure.getMetricStructure(performance)
+    melodic_accents = melodic_accent.analyze_melodic_accent(performance)
+    metric_grouping, metrical_scores = metric_structure.getMetricStructure(performance)
     key = key_change.analyze_key_change(performance)
-    accentuation = accentuation_curve.accentuation_curve(melodic_accent, metrical_scores, key, notes)
+    accentuation = accentuation_curve.accentuation_curve(melodic_accents, metrical_scores, key, notes)
     print "Rule 1 tempo: %d" % rule1_tempo(group_structure, nominal_tempo, tempo_events)
     print "Rule 1 loudness: %d" % rule1_loudness(group_structure, nominal_loudness)
     print "Rule 2: %d" % rule2(group_structure, nominal_tempo, tempo_events)
@@ -362,5 +390,5 @@ if __name__ == '__main__':
     print "Rule 5: %d" % rule5(group_structure, nominal_tempo, tempo_events)
 #    accentuation_curve(melodic_accent.analyze_melodic_accent(performance), metric_scores, key_change.analyze_key_change(performance), [note for note in performance.tracks[0].eventList if note.type == "note"])
     print "Rule 5: %d" % rule5(group_structure, nominal_tempo, tempo_events)
-    metric_structure, metric_scores = metric_structure.getMetricStructure(performance)
-    accentuation_curve(melodic_accent.analyze_melodic_accent(performance), metric_scores, key_change.analyze_key_change(performance), [note for note in performance.tracks[0].eventList if note.type == "note"])
+    metric_grouping, metric_scores = metric_structure.getMetricStructure(performance)
+    accentuation_curve.accentuation_curve(melodic_accents, metric_scores, key, [note for note in performance.tracks[0].eventList if note.type == "note"])

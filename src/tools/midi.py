@@ -60,8 +60,8 @@ def remove_tempo_events_at(time, midi):
     
 def translate_tempo(tempo):
 #    print "Translated tempo %d to %d for %s" % (tempo, 60000000 / tempo, inspect.stack()[2][3])
-    if tempo < 60000000 / tempo:
-        exit(-1)
+#    if tempo < 60000000 / tempo:
+#        exit(-1)
     return 60000000 / tempo
     
 #midi = prepare_initial_midi("../../res/midi_text.txt", "../../res/sample.mid", 60000000 / 3947)

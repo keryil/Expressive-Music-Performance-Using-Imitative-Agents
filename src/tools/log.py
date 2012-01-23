@@ -6,7 +6,7 @@ Created on 10 Oca 2012
 import logging
 
 def get_agent_logger(name, agentId):
-        logger = logging.getLogger(name)
+        logger = logging.getLogger("%s%s" % (name, agentId))
         logger.setLevel("INFO")
         handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s Agent' + str(agentId) + ' %(module)s.%(funcName)s(): %(message)s'))

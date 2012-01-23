@@ -8,7 +8,7 @@ This module implements the LBDM by Combouropoulos 2001
 import math
 from tools import log
 from tools.analysis.key_change import midi_to_note
-from copy import copy, deepcopy
+from copy import deepcopy
 logger = None
 
 __strength = lambda f, s, m: (min(m, (math.fabs(f - s)))) / float(f + s) 
@@ -72,12 +72,13 @@ def getNoteGroups(midi):
             current_group.append(note)
         elif boundaryStrengths[i] > avg_strength:
 #            current_group.append(note)
-            groups.append(copy(current_group))
+            groups.append(deepcopy(current_group))
             current_group = [note]
         else:
             current_group.append(note)
     if current_group != []:
         groups.append(current_group)
+#    print "Preliminary groups: %s" % groups
     
     detailedGroups = []
     firstNoteOfGroup = 0
@@ -85,16 +86,18 @@ def getNoteGroups(midi):
         first = []
         last = []
         firstStrength = 0.
-        turningPointIndex = boundaryStrengths.index(max(boundaryStrengths[firstNoteOfGroup:firstNoteOfGroup + len(group) - 1]), firstNoteOfGroup)
+        third_max_lbdm = max(boundaryStrengths[firstNoteOfGroup+1:firstNoteOfGroup + len(group) - 1])
+        turningPointIndex = boundaryStrengths.index(third_max_lbdm, firstNoteOfGroup + 1, firstNoteOfGroup + len(group) - 1)
+#        print "DEBUG:: turningPointIndex=%d" % turningPointIndex
         turningPoint = noteList[turningPointIndex]
 #        foundTurningPoint = False
         for i in range(len(group)):
             if firstNoteOfGroup + i < turningPointIndex:
-                first.append(note)
+                first.append(noteList[firstNoteOfGroup + i])
             elif firstNoteOfGroup + i > turningPointIndex:
-                last.append(note)
+                last.append(noteList[firstNoteOfGroup + i])
                 
-        firstNoteOfGroup += len(group) - 1
+        firstNoteOfGroup += len(group)
         detailedGroups.append([first, turningPoint, last])
                 
                 

@@ -24,10 +24,8 @@ from tools.analysis.key_change import note_find_measure
 #    print "Rule 1: t: %d, l: %d"  % (r1_tempo, r1_loudness)
 #    return score
 
-def abs(n):
-    return -n
 
-def find_tempo_of_note(note, midi):
+def find_tempo(note, midi):
         tempo = None
         tempo_events = [(event.time, event.tempo) for event in midi.tracks[0].eventList if event.type == "tempo"]
         for time, temp in tempo_events:
@@ -35,9 +33,10 @@ def find_tempo_of_note(note, midi):
                 break
             else: 
                 tempo = temp
+        print tempo
         return tempo
 
-def find_tempo_of_note_from_groups(note, tempo_events):
+def find_tempo_from_event_tuples(note, tempo_events):
     tempo = None
     for time, temp in tempo_events:
         if time > note.time:
@@ -62,7 +61,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             note = first[i]
             
             # find the tempo during this note
-            tempo = find_tempo_of_note_from_groups(note, tempo_events)
+            tempo = find_tempo_from_event_tuples(note, tempo_events)
 #            for time, temp in tempo_events:
 #                if time <= note.time:
 #                    tempo = temp
@@ -75,7 +74,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
                 next_note = turning
             else:
                 next_note = first[i + 1]
-            next_tempo = find_tempo_of_note_from_groups(next_note, tempo_events)
+            next_tempo = find_tempo_from_event_tuples(next_note, tempo_events)
                 
 #            for time, tempo in tempo_events:
 #                if time <= next_note.time:
@@ -93,7 +92,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             note = last[i]
             
             # find the tempo during this note
-            tempo = find_tempo_of_note_from_groups(note, tempo_events)
+            tempo = find_tempo_from_event_tuples(note, tempo_events)
 #            for time, temp in tempo_events:
 #                if time <= note.time:
 #                    tempo = temp
@@ -107,7 +106,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             else:
                 next_note = last[i + 1]
                 
-            next_tempo = find_tempo_of_note_from_groups(next_note, tempo_events)
+            next_tempo = find_tempo_from_event_tuples(next_note, tempo_events)
             
             # not sure about abs
             if((nominal_tempo - next_tempo) <= (nominal_tempo - tempo)):
@@ -136,7 +135,10 @@ def rule1_loudness(group_structure, nominal_volume):
             # not sure about abs
             if((nominal_volume - next_note.volume) > (nominal_volume - note.volume)):
                 score += 1
-        
+            # KEREM
+#            else:
+#                score -= 1
+                
         # process the last part
         last = [turning] + last
         for i in range(len(last) - 1):
@@ -146,7 +148,9 @@ def rule1_loudness(group_structure, nominal_volume):
             # not sure about abs
             if((nominal_volume - next_note.volume) <= (nominal_volume - note.volume)):
                 score += 1
-            
+#            else:
+#                score -= 1
+                
     return score
 
 def rule2(group_structure, nominal_tempo, tempo_events):
@@ -155,12 +159,12 @@ def rule2(group_structure, nominal_tempo, tempo_events):
         # go to the last note
         note = group[-1][-1]
         # find the tempo during this note
-        tempo = None
-        for time, temp in tempo_events:
-            if time <= note.time:
-                tempo = temp
-            if time == note.time:
-                break
+        tempo = find_tempo_from_event_tuples(note, tempo_events)
+#        for time, temp in tempo_events:
+#            if time <= note.time:
+#                tempo = temp
+#            if time == note.time:
+#                break
         if tempo - nominal_tempo > 0:
             score += 1
 #    print "Rule 2: %d" % score
@@ -221,32 +225,32 @@ def rule4_tempo(notes, accentuation_curve, nominal_tempo, tempo_events):
             accentuated_note_indexes.append(i)
     
     for i in accentuated_note_indexes:
-        prev_tempo = None
         prev_note = notes[i-1]
-        for time, temp in tempo_events:
-            if time <= prev_note.time:
-                prev_tempo = temp
-            if time == prev_note.time:
-                break
+        prev_tempo = find_tempo_from_event_tuples(prev_note, tempo_events)
+#        for time, temp in tempo_events:
+#            if time <= prev_note.time:
+#                prev_tempo = temp
+#            if time == prev_note.time:
+#                break
         prev_dev = prev_tempo - nominal_tempo
         
         
-        tempo = None
         note = notes[i]
-        for time, temp in tempo_events:
-            if time <= note.time:
-                tempo = temp
-            if time == note.time:
-                break
+        tempo = find_tempo_from_event_tuples(note, tempo_events)
+#        for time, temp in tempo_events:
+#            if time <= note.time:
+#                tempo = temp
+#            if time == note.time:
+#                break
         dev = tempo - nominal_tempo
         
-        next_tempo = None
         next_note = notes[i+1]
-        for time, temp in tempo_events:
-            if time <= next_note.time:
-                next_tempo = temp
-            if time == next_note.time:
-                break
+        next_tempo = find_tempo_from_event_tuples(next_note, tempo_events)
+#        for time, temp in tempo_events:
+#            if time <= next_note.time:
+#                next_tempo = temp
+#            if time == next_note.time:
+#                break
         next_dev = next_tempo - nominal_tempo
         if dev < next_dev and dev < prev_dev:
             score += 1
@@ -292,14 +296,14 @@ def rule5(group_structure, nominal_tempo, tempo_events):
     for i in range(len(group_structure)):
         group = group_structure[i]
         note = group[-1][-1]
-        tempo = None
         
         # find the tempo for current note
-        for time, temp in tempo_events:
-            if time <= note.time:
-                tempo = temp
-            if time == note.time:
-                break
+        tempo = find_tempo_from_event_tuples(note, tempo_events)
+#        for time, temp in tempo_events:
+#            if time <= note.time:
+#                tempo = temp
+#            if time == note.time:
+#                break
         
         prev_note = None
         prev_tempo = None
@@ -309,23 +313,20 @@ def rule5(group_structure, nominal_tempo, tempo_events):
         except IndexError:
             prev_note = group[-2]
         # find the tempo for previous note
-        for time, temp in tempo_events:
-            if time <= prev_note.time:
-                prev_tempo = temp
-            if time == prev_note.time:
-                break
-            
+        prev_tempo = find_tempo_from_event_tuples(prev_note, tempo_events)    
+        
         next_note = None
         next_tempo = None
         
         try:
             next_note = group_structure[i + 1][0][0]
             # find the tempo for previous note
-            for time, temp in tempo_events:
-                if time <= next_note.time:
-                    next_tempo = temp
-                if time == next_note.time:
-                    break
+            next_tempo = find_tempo_from_event_tuples(next_note, tempo_events)
+#            for time, temp in tempo_events:
+#                if time <= next_note.time:
+#                    next_tempo = temp
+#                if time == next_note.time:
+#                    break
             if ((tempo - nominal_tempo) - (prev_tempo - nominal_tempo)) * ((tempo - nominal_tempo) - (next_tempo - nominal_tempo)):
                 score += 1
         # we may hit the end of the score here

@@ -8,7 +8,7 @@ import random
 from copy import copy, deepcopy
 import pp
 from tools import midi as mid
-from tools.midi import translate_tempo
+from tools.midi import remove_tempo_events_at, set_volume, translate_tempo
 from tools import log
 import logging
 import time
@@ -27,6 +27,7 @@ class Simulation(object):
     midi = None
     defaultTempo = 3947
     defaultVolume = 100
+    maxVolume = 255
     
     # this is the exact numeric value for default tempo, which is different from what is above
     nominalTempo = int(60000000 / defaultTempo)
@@ -34,15 +35,17 @@ class Simulation(object):
     resetDone = False
     __jobServer = None
     __logger = None
-    weight_tempo, weight_loudness, weight_tempo_rules, weight_loudness_rules = \
-        1.,0.,{"rule1":1.0,"rule2":0.,"rule4":0.,"rule5":0.},{"rule1":0.0,"rule3":0.,"rule4":0.}
+    weight_tempo = 1.
+    weight_loudness = 0. 
+    weight_tempo_rules = {"rule1":1.0,"rule2":0.,"rule4":0.,"rule5":0.}
+    weight_loudness_rules = {"rule1":1.0,"rule3":0.,"rule4":0.}
     
     def __init__(self):
         self.midi = mid.prepare_initial_midi("../../res/midi_text.txt", "../../res/sample.mid", self.defaultTempo)
         self.__jobServer = pp.Server()
         self.__logger = log.get_logger(__name__)
     
-    def reset(self, numberOfAgents=2):
+    def reset(self, numberOfAgents=15):
         """
         Initializes the simulation with the set number of agents and sets Simulation.resetDone = True. Should be called 
         before starting any simulation run. 
@@ -51,20 +54,23 @@ class Simulation(object):
         initial_performances = []
         for i in range(numberOfAgents):
             new_midi = mid.prepare_initial_midi("../../res/midi_text.txt", "../../res/sample%d.mid" % i, self.defaultTempo)
-            notes = [event for event in new_midi.tracks[0].eventList if event.type == "note"]
+            notes = [event for event in self.midi.tracks[0].eventList if event.type == "note"]
             tempos = [event for event in self.midi.tracks[0].eventList if event.type == "tempo"]
 #            self.nominalTempo = tempos[-1].tempo
             first_tempo = self.nominalTempo * random.random() * 0.75 + 0.55 * self.nominalTempo
+            remove_tempo_events_at(0, new_midi)
             new_midi.tracks[0].addTempo(0, first_tempo)
             for note in notes:
-                volume = self.defaultVolume * random.random() * 0.5 + 0.75 * self.defaultVolume
+                volume = min(self.maxVolume, self.defaultVolume * random.random() * 0.5 + 0.75 * self.defaultVolume)
                 tempo = self.nominalTempo * random.random() * 0.75 + 0.55 * self.nominalTempo
 #                print "Tempo/volume deviation at %d: %f, %f" % (notes.index(note), tempo, volume)
-                new_midi.tracks[0].addTempo(note.time, tempo)
-                note.volume = volume
-                new_midi.tracks[0].addTempo(note.time + note.duration, first_tempo)
+                remove_tempo_events_at(note.time, new_midi)
+                new_midi.tracks[0].addTempo(note.time, translate_tempo(tempo))
+                set_volume(new_midi, note, volume)
+#                new_midi.tracks[0].addTempo(note.time + note.duration, first_tempo)
             initial_performances.append(new_midi)
-            self.agents.append(Agent(i, self.weight_tempo, self.weight_loudness, self.weight_tempo_rules, self.weight_loudness_rules, new_midi, self.nominalTempo, self.defaultVolume))
+            self.agents.append(Agent(i, self.weight_tempo, self.weight_loudness, self.weight_tempo_rules, self.weight_loudness_rules, new_midi, self.defaultTempo, self.defaultVolume,
+                                     learning_rate=0.1))
         self.resetDone = True
         
         average_loudness_dev, average_tempo_dev = self.collect_average_deviations(initial_performances)
@@ -76,6 +82,8 @@ class Simulation(object):
         correlation = correlate(t_lbdm, average_tempo_dev)
         
         outfile.write("Tempo/tLBDM correlation: %f" % correlation)
+        correlation = correlate(t_lbdm, average_loudness_dev)
+        outfile.write("\nLoudness/tLBDM correlation: %f" % correlation)
         outfile.close()
         
         self.__logger.info("Reset.")
@@ -104,6 +112,8 @@ class Simulation(object):
                 break
             else: 
                 tempo = temp
+        tempo = translate_tempo(tempo)
+        print "Tempo: %d" % tempo
         return tempo
     
     def collect_data(self):
@@ -126,11 +136,12 @@ class Simulation(object):
         for i in range(len(notes)):
             note = notes[i]
             note.volume += average_loudness_dev[i]
+            remove_tempo_events_at(note.time, average_performance)
             average_performance.tracks[0].addTempo(note.time, nominalTempo + average_tempo_dev[i])
         
-        outfile = open("average_performance.mid", "w")
-        average_performance.writeFile(outfile)
-        outfile.close()
+#        outfile = open("average_performance.mid", "w")
+#        average_performance.writeFile(outfile)
+#        outfile.close()
         
         outfile = open("average_performance.txt", "w")
         for i, (t_dev, l_dev) in enumerate(zip(average_tempo_dev, average_loudness_dev)):
@@ -138,6 +149,8 @@ class Simulation(object):
 #        print "Correlating tLBDM and average tempo deviations"
         correlation = correlate(t_lbdm, average_tempo_dev)
         outfile.write("Tempo/tLBDM correlation: %f" % correlation)
+        correlation = correlate(t_lbdm, average_loudness_dev)
+        outfile.write("\nLoudness/tLBDM correlation: %f" % correlation)
         outfile.close()
         
         return average_performance

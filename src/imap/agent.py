@@ -14,6 +14,7 @@ from tools.analysis.melodic_accent import analyze_melodic_accent
 from tools.analysis.rules import rule1_tempo, rule1_loudness, rule2, rule3,\
     rule4_tempo, rule4_loudness, rule5
 from copy import deepcopy
+from tools.midi import remove_tempo_events_at, set_volume, translate_tempo
 
 class Agent(object):
     '''
@@ -102,6 +103,7 @@ class Agent(object):
                         my_tempo = temp
                     if time == my_note.time:
                         break 
+                my_tempo = translate_tempo(my_tempo)
                 my_volume = my_note.volume
                 
                 his_tempo = None
@@ -111,22 +113,28 @@ class Agent(object):
                     if time == his_note.time:
                         break 
                 his_volume = his_note.volume
+                his_tempo = translate_tempo(his_tempo)
                 
                 nominal_tempo = self.__nominal_tempo
 #                my_tempo_delta = my_tempo - nominal_tempo
 #                his_tempo_delta = his_tempo - nominal_tempo
                 new_tempo = int(float(his_tempo) * self.__learningRate + float(my_tempo) * (1-self.__learningRate))
 #                new_tempo_delta = new_tempo - nominal_tempo #(1-self.__learningRate) * my_tempo_delta + self.__learningRate * his_tempo_delta
+                remove_tempo_events_at(my_note.time, self.performance)
                 self.performance.tracks[0].addTempo(my_note.time, new_tempo)
-                self.performance.tracks[0].addTempo(my_note.time + my_note.duration, my_tempo)
+#                self.performance.tracks[0].addTempo(my_note.time + my_note.duration, my_tempo)
 #                self.__logger.info("Changed tempo at note %d from %d to %d" % (i, my_tempo, new_tempo))
                 
                 nominal_volume = self.__nominal_volume
 #                my_volume_delta = my_volume - nominal_volume
 #                his_volume_delta = his_volume - nominal_volume
                 new_volume = int(self.__learningRate * float(his_volume) + (self.__learningRate - 1) * float(my_volume))
+                if new_volume > 255:
+                    new_volume = 255
+                elif new_volume < 1:
+                    new_volume = 1
 #                new_volume_delta = new_volume - nominal_volume #(1-self.__learningRate) * my_volume_delta + self.__learningRate * his_volume_delta
-                my_note.volume = new_volume
+                set_volume(self.performance, my_note, new_volume)
                 
             self.__self_evaluation = self.__listen_own(nominal_tempo, nominal_volume)
         else:
@@ -149,7 +157,7 @@ class Agent(object):
         self.__logger.debug("Evaluating")
         return self.__evaluate_tempo(r1_tempo, r2, r4_tempo, r5) * \
             self.__weight_tempo + self.__evaluate_loudness(r1_loudness, r3, r4_loudness) * \
-                (1-self.__weight_loudness)
+                self.__weight_loudness
     
     def feedback(self, str):
         print "Agent %s %s" % (self.__id, str)

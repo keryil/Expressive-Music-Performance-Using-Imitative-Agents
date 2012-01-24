@@ -13,7 +13,7 @@ from tools import log
 import logging
 import time
 from tools.analysis.rules import rule1_tempo, rule1_loudness, rule2, rule3,\
-    rule4_tempo, rule4_loudness, rule5
+    rule4_tempo, rule4_loudness, rule5, find_tempo
 from tools.analysis.lbdm import getNoteGroups, transferred_lbdm, lbdm
 from tools.analysis.accentuation_curve import accentuation_curve
 from tools.analysis.melodic_accent import analyze_melodic_accent
@@ -58,8 +58,8 @@ class Simulation(object):
         for i in range(numberOfAgents):
 #            new_midi = mid.prepare_initial_midi("../../res/midi_text.txt", "../../res/sample%d.mid" % i, self.defaultTempo)
 #            notes = [event for event in self.midi.tracks[0].eventList if event.type == "note"]
-#            tempos = [event for event in self.midi.tracks[0].eventList if event.type == "tempo"]
-##            self.nominalTempo = tempos[-1].tempo
+#            rTempos = [event for event in self.midi.tracks[0].eventList if event.type == "tempo"]
+##            self.nominalTempo = rTempos[-1].tempo
 #            first_tempo = self.nominalTempo * random.random() * 0.75 + 0.55 * self.nominalTempo
 #            remove_tempo_events_at(0, new_midi)
 #            new_midi.tracks[0].addTempo(0, first_tempo)
@@ -76,19 +76,19 @@ class Simulation(object):
 ##                new_midi.tracks[0].addTempo(note.time + note.duration, first_tempo)
 #            self.__logger.info("Volumes for agent %d: %s" % (i, [note.volume for note in new_midi.tracks[0].eventList if note.type == "note"]))
             agent = Agent(i, self.weight_tempo, self.weight_loudness, self.weight_tempo_rules, self.weight_loudness_rules, self.defaultTempo, self.defaultVolume,
-                                     learning_rate=0.1)
+                                     learning_rate=0.2)
             self.agents.append(agent)
             initial_performances.append(agent.performance)
             agent = None
             
             
-        for i in range(len(initial_performances)-1):
-            p = initial_performances[i]
-            others = []
-            for i in range(len(initial_performances)-1):
-                per = initial_performances[i]
-                if per != p:
-                    others.append(per)
+#        for i in range(len(initial_performances)):
+#            p = initial_performances[i]
+#            others = []
+#            for i in range(len(initial_performances)):
+#                per = initial_performances[i]
+#                if per != p:
+#                    others.append(per)
                 
 #            if len(others) < len(initial_performances) - 1:
 #                print "Dafuq? %d vs %d" % (len(others), len(initial_performances) - 1)
@@ -103,10 +103,9 @@ class Simulation(object):
         
         average_performance = mid.prepare_initial_midi("../../res/midi_text.txt", "../../res/sample_average.mid", self.defaultTempo)
         notes = [event for event in average_performance.tracks[0].eventList if event.type == "note"]
-#           
         for i in range(len(notes)):
 #            prf = initial_performances[i]
-#            tempos = [event for event in prf.tracks[0].eventList if event.type == "tempo"]
+#            rTempos = [event for event in prf.tracks[0].eventList if event.type == "tempo"]
             for n, deviations in enumerate(zip(average_loudness_dev, average_tempo_dev)):
                 v_dev, t_dev = deviations
 #                print deviations
@@ -115,14 +114,34 @@ class Simulation(object):
                 remove_tempo_events_at(note.time, average_performance)
                 average_performance.tracks[0].addTempo(note.time, self.defaultTempo + t_dev)
         notes = [event for event in average_performance.tracks[0].eventList if event.type == "note"]
+#        print find_tempo(notes[0],average_performance)
+#        exit()
+        rTempos = [50000. / translate_tempo(find_tempo(note, average_performance)) for note in notes]
+#        print rTempos
+#        exit()
+        
         t_lbdm = transferred_lbdm(lbdm(average_performance), getNoteGroups(average_performance)) + [0.]
         metric_groups, metric_scores = metric_structure.getMetricStructure(average_performance)
         accentuation = accentuation_curve(melodic_accent.analyze_melodic_accent(average_performance), 
                                           metric_scores, key_change.analyze_key_change(average_performance), 
                                           notes)
         accentuation_correlation = correlate(accentuation, average_loudness_dev)
-        correlation = correlate(t_lbdm, average_tempo_dev)
-        outfile.write("Tempo/tLBDM tlbdm_correlation: %f" % correlation)
+        
+#        pyplot.plot(range(len(accentuation)), accentuation)
+#        pyplot.plot(range(len(average_loudness_dev)), average_loudness_dev)
+#        pyplot.show()
+
+        t_lbdm = map(lambda x: 10 * x, t_lbdm)
+        true_lbdm = map(lambda x: 10*x, lbdm(average_performance))
+        pyplot.plot(range(len(true_lbdm)), true_lbdm, color="b")
+        pyplot.plot(range(len(t_lbdm)), t_lbdm, color="r")
+#        pyplot.plot(range(len(average_tempo_dev)), map(lambda x: (max(average_tempo_dev) - x), average_tempo_dev), color="g")
+        pyplot.plot(range(len(rTempos)), rTempos, color="g")
+        pyplot.plot()
+        pyplot.show()
+        
+        correlation = correlate(t_lbdm, rTempos)
+        outfile.write("rTempo/tLBDM tlbdm_correlation: %f" % correlation)
         tlbdm_correlation = correlate(t_lbdm, average_loudness_dev)
         outfile.write("\nLoudness/tLBDM: %f" % tlbdm_correlation)
         outfile.write("\nLoudness/Accentuation: %f" % accentuation_correlation)
@@ -131,7 +150,7 @@ class Simulation(object):
         self.__logger.info("Reset.")
 #        exit()
     
-    def run(self, numberOfCycles=30):
+    def run(self, numberOfCycles=20):
         """
         Starts and runs the simulation by executing cycles for the given number of times.
         """
@@ -167,16 +186,16 @@ class Simulation(object):
         """
         print "Collecting data..."
         
-#        pyplot.plot(range(len(average_loudness_dev)), average_loudness_dev)
-#        pyplot.plot(range(len(average_tempo_dev)), average_tempo_dev)
-#        pyplot.plot()
         t = [event.tempo for event in self.midi.tracks[0].eventList if event.type == "tempo"]
         nominalTempo = self.defaultTempo
         #t[-1]
         average_performance = deepcopy(self.midi)
         t_lbdm = transferred_lbdm(lbdm(self.midi), getNoteGroups(self.midi)) + [0.]
+        t_lbdm = map(lambda x: 10 * x, t_lbdm)
         notes = [event for event in average_performance.tracks[0].eventList if event.type == "note"]
         average_loudness_dev, average_tempo_dev = self.collect_average_deviations([agent.performance for agent in self.agents], writeToFile=True)
+        
+        
         for i in range(len(notes)):
             note = notes[i]
             set_volume(average_performance, note, self.defaultVolume + average_loudness_dev[i])
@@ -187,6 +206,17 @@ class Simulation(object):
 #        average_performance.writeFile(outfile)
 #        outfile.close()
         notes = [event for event in average_performance.tracks[0].eventList if event.type == "note"]
+        rTempos = [50000. / translate_tempo(find_tempo(note, average_performance)) for note in notes]
+        print rTempos
+
+        pyplot.plot(range(len(t_lbdm)), t_lbdm, color="r")
+        true_lbdm = map(lambda x: 10*x, lbdm(average_performance))
+        pyplot.plot(range(len(true_lbdm)), true_lbdm, color="b")
+#        pyplot.plot(range(len(lbdm(average_performance))), lbdm(average_performance), color="b")
+        pyplot.plot(range(len(rTempos)), rTempos, color="g")
+        pyplot.plot()
+        pyplot.show()
+        
         metric_groups, metric_scores = metric_structure.getMetricStructure(average_performance)
         accentuation = accentuation_curve(melodic_accent.analyze_melodic_accent(average_performance), 
                                           metric_scores, key_change.analyze_key_change(average_performance), 
@@ -195,8 +225,8 @@ class Simulation(object):
         for i, (t_dev, l_dev) in enumerate(zip(average_tempo_dev, average_loudness_dev)):
             outfile.write("[%d] tdev=%f ldev=%f\n" % (i, t_dev, l_dev))
 #        print "Correlating tLBDM and average tempo deviations"
-        correlation = correlate(t_lbdm, average_tempo_dev)
-        outfile.write("Tempo/tLBDM correlation: %f" % correlation)
+        correlation = correlate(t_lbdm, rTempos)
+        outfile.write("rTempo/tLBDM correlation: %f" % correlation)
         correlation = correlate(t_lbdm, average_loudness_dev)
         outfile.write("\nLoudness/tLBDM correlation: %f" % correlation)
         correlation = correlate(accentuation, average_loudness_dev)

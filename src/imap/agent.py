@@ -51,7 +51,7 @@ class Agent(object):
         remove_tempo_events_at(0, new_midi)
         new_midi.tracks[0].addTempo(0, first_tempo)
         for note in notes:
-            volume = min(255, nominal_volume * random.random() * 0.5 + 0.75 * nominal_volume)
+            volume = nominal_volume * random.random() * 0.5 + 0.75 * nominal_volume
             tempo = nominal_tempo * random.random() * 0.75 + 0.55 * nominal_tempo
 #                print "Tempo/volume deviation at %d: %f, %f" % (notes.index(note), tempo, volume)
             remove_tempo_events_at(note.time, new_midi)
@@ -141,9 +141,16 @@ class Agent(object):
 #                his_tempo = translate_tempo(his_tempo)
                 
                 nominal_tempo = self.__nominal_tempo
-#                my_tempo_delta = my_tempo - nominal_tempo
-#                his_tempo_delta = his_tempo - nominal_tempo
-                new_tempo = int(float(his_tempo) * self.__learningRate + float(my_tempo) * (1-self.__learningRate))
+                my_tempo_delta = abs(my_tempo - nominal_tempo)
+                his_tempo_delta = abs(his_tempo - nominal_tempo)
+#                new_tempo = int(float(his_tempo) * self.__learningRate + float(my_tempo) * (1-self.__learningRate))
+                new_tempo = None
+                new_delta = my_tempo_delta * (1-self.__learningRate) + his_tempo_delta * (self.__learningRate)
+                if my_tempo < nominal_tempo:
+                    new_tempo = nominal_tempo - new_delta
+                else:
+                    new_tempo = nominal_tempo + new_delta
+                    
 #                new_tempo_delta = new_tempo - nominal_tempo #(1-self.__learningRate) * my_tempo_delta + self.__learningRate * his_tempo_delta
                 remove_tempo_events_at(my_note.time, self.performance)
                 self.performance.tracks[0].addTempo(my_note.time, translate_tempo(new_tempo))
@@ -151,19 +158,25 @@ class Agent(object):
 #                self.performance.tracks[0].addTempo(my_note.time + my_note.duration, my_tempo)
                 if my_tempo > 7000 or his_tempo > 7000:
                     exit(1) 
-                self.__logger.info("Changed tempo at note %d from %d to %d (%d-->%d-->%d)" % (i, my_tempo, new_tempo, my_tempo, self.__nominal_tempo, his_tempo))
+#                self.__logger.info("Changed tempo at note %d from %d to %d (%d-->%d-->%d)" % (i, my_tempo, new_tempo, my_tempo, self.__nominal_tempo, his_tempo))
                 
                 nominal_volume = self.__nominal_volume
-#                my_volume_delta = my_volume - nominal_volume
-#                his_volume_delta = his_volume - nominal_volume
-                new_volume = int(self.__learningRate * float(his_volume) + (1- self.__learningRate) * float(my_volume))
+                my_volume_delta = abs(my_volume - nominal_volume)
+                his_volume_delta = abs(his_volume - nominal_volume)
+                new_volume_delta = (1-self.__learningRate) * my_volume_delta + self.__learningRate * his_volume_delta
+                new_volume = None
+                if new_volume < nominal_volume:
+                    new_volume = nominal_volume - new_volume_delta
+                else:
+                    new_volume = nominal_volume + new_volume_delta
+#                new_volume = int(self.__learningRate * float(his_volume) + (1- self.__learningRate) * float(my_volume))
                 if new_volume > 255:
                     new_volume = 255
                 elif new_volume < 1:
                     new_volume = 1
 #                new_volume_delta = new_volume - nominal_volume #(1-self.__learningRate) * my_volume_delta + self.__learningRate * his_volume_delta
                 set_volume(self.performance, my_note, new_volume)
-                self.__logger.info("Changed volume at note %d from %d to %d (%d-->%d-->%d)" % (i, my_note.volume, new_volume, my_note.volume, self.__nominal_volume, his_volume))
+#                self.__logger.info("Changed volume at note %d from %d to %d (%d-->%d-->%d)" % (i, my_note.volume, new_volume, my_note.volume, self.__nominal_volume, his_volume))
                 
                 
             self.__self_evaluation = self.__listen_own(nominal_tempo, nominal_volume)

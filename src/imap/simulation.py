@@ -21,6 +21,9 @@ from tools.analysis.metric_structure import getMetricStructure
 from tools.analysis import key_change, melodic_accent, metric_structure
 from matplotlib import pyplot
 from tools.analysis.key_change import correlate
+from math import fabs
+
+abs = lambda x: int(fabs(float(x)))
 
 class Simulation(object):
     agents = None
@@ -94,11 +97,9 @@ class Simulation(object):
         
         average_loudness_dev, average_tempo_dev = self.collect_average_deviations(initial_performances)
         outfile = open("first_performance.txt", "w")
-        t_lbdm = transferred_lbdm(lbdm(self.midi), getNoteGroups(self.midi)) + [0.]
         
         for i, (t_dev, l_dev) in enumerate(zip(average_tempo_dev, average_loudness_dev)):
             outfile.write("[%d] tdev=%f ldev=%f\n" % (i, t_dev, l_dev))
-        tlbdm_correlation = correlate(t_lbdm, average_tempo_dev)
         
         average_performance = mid.prepare_initial_midi("../../res/midi_text.txt", "../../res/sample_average.mid", self.defaultTempo)
         notes = [event for event in average_performance.tracks[0].eventList if event.type == "note"]
@@ -114,12 +115,14 @@ class Simulation(object):
                 remove_tempo_events_at(note.time, average_performance)
                 average_performance.tracks[0].addTempo(note.time, self.defaultTempo + t_dev)
         notes = [event for event in average_performance.tracks[0].eventList if event.type == "note"]
+        t_lbdm = transferred_lbdm(lbdm(average_performance), getNoteGroups(average_performance)) + [0.]
         metric_groups, metric_scores = metric_structure.getMetricStructure(average_performance)
         accentuation = accentuation_curve(melodic_accent.analyze_melodic_accent(average_performance), 
                                           metric_scores, key_change.analyze_key_change(average_performance), 
                                           notes)
         accentuation_correlation = correlate(accentuation, average_loudness_dev)
-        outfile.write("Tempo/tLBDM tlbdm_correlation: %f" % tlbdm_correlation)
+        correlation = correlate(t_lbdm, average_tempo_dev)
+        outfile.write("Tempo/tLBDM tlbdm_correlation: %f" % correlation)
         tlbdm_correlation = correlate(t_lbdm, average_loudness_dev)
         outfile.write("\nLoudness/tLBDM: %f" % tlbdm_correlation)
         outfile.write("\nLoudness/Accentuation: %f" % accentuation_correlation)
@@ -128,7 +131,7 @@ class Simulation(object):
         self.__logger.info("Reset.")
 #        exit()
     
-    def run(self, numberOfCycles=40):
+    def run(self, numberOfCycles=30):
         """
         Starts and runs the simulation by executing cycles for the given number of times.
         """
@@ -173,7 +176,7 @@ class Simulation(object):
         average_performance = deepcopy(self.midi)
         t_lbdm = transferred_lbdm(lbdm(self.midi), getNoteGroups(self.midi)) + [0.]
         notes = [event for event in average_performance.tracks[0].eventList if event.type == "note"]
-        average_loudness_dev, average_tempo_dev = self.collect_average_deviations([agent.perform(-1) for agent in self.agents], writeToFile=True)
+        average_loudness_dev, average_tempo_dev = self.collect_average_deviations([agent.performance for agent in self.agents], writeToFile=True)
         for i in range(len(notes)):
             note = notes[i]
             set_volume(average_performance, note, self.defaultVolume + average_loudness_dev[i])
@@ -221,9 +224,9 @@ class Simulation(object):
                 average_tempo_dev = [0. for note in notes]
             
             for n, note in enumerate(notes):
-                volume_dev = note.volume - self.defaultVolume
+                volume_dev = abs(note.volume - self.defaultVolume)
                 tempo = self.__find_tempo_of_note(note, performance)
-                tempo_dev = translate_tempo(tempo) - nominalTempo
+                tempo_dev = abs(translate_tempo(tempo) - nominalTempo)
 #                print "note %d: volume %f, tempo %f || v_dev %f, t_dev %f" % (n, note.volume, tempo, volume_dev, tempo_dev)
                 if writeToFile:
                     f.write("note %d: volume %f, tempo %f || v_dev %f, t_dev %f\n" % (n, note.volume, tempo, volume_dev, tempo_dev))

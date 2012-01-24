@@ -54,7 +54,7 @@ def accentuation_curve(melodic_accent, metrical_scores, key_change, notes, maxVa
 
 if __name__ == "__main__":
     from tools import midi as mid
-    from tools.analysis import lbdm, metric_grouping, melodic_accent, key_change
+    from tools.analysis import lbdm, melodic_accent, key_change
     performance = mid.prepare_initial_midi("../../../res/midi_text.txt", "../../../res/sample.midi", 15200)
     group_structure = lbdm.getNoteGroups(performance)
     tempo_events = [(event.time, event.tempo) for event in performance.tracks[0].eventList if event.type == "tempo"]

@@ -10,6 +10,7 @@ from tools.analysis import lbdm, melodic_accent, metric_structure, key_change,\
     accentuation_curve
 from tools.analysis.key_change import note_find_measure
 from tools.midi import translate_tempo, remove_tempo_events_at
+from math import fabs
 
 
 
@@ -25,6 +26,8 @@ from tools.midi import translate_tempo, remove_tempo_events_at
 #    print "Rule 1: t: %d, l: %d"  % (r1_tempo, r1_loudness)
 #    return score
 
+
+abs = lambda x: int(fabs(float(x)))
 
 def find_tempo(note, midi):
         tempo = None
@@ -85,7 +88,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
 #                    break
             
             # not sure about abs
-            if((next_tempo - nominal_tempo) > (tempo - nominal_tempo)):
+            if(abs(next_tempo - nominal_tempo) > abs(tempo - nominal_tempo)):
                 score += 1
 #                print "DEBUG: tempo %f next_tempo %f satisfies the first group constraint." % (tempo, next_tempo)
 #            else:
@@ -117,7 +120,7 @@ def rule1_tempo(group_structure, nominal_tempo, tempo_events):
             next_tempo = find_tempo_from_event_tuples(next_note, tempo_events)
             next_tempo = translate_tempo(next_tempo)
             # not sure about abs
-            if((next_tempo - nominal_tempo) <= (tempo - nominal_tempo)):
+            if(abs(next_tempo - nominal_tempo) <= abs(tempo - nominal_tempo)):
                 score += 1
 #                print "DEBUG: tempo %f next_tempo %f satisfies the last group constraint." % (tempo, next_tempo)
 #            else:
@@ -151,10 +154,10 @@ def rule1_loudness(group_structure, nominal_volume):
             # not sure about abs
             if(next_note.volume - nominal_volume) > (note.volume - nominal_volume):
                 score += 1
-                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, satisfies first group constraint" % (nominal_volume, note.volume, next_note.volume)
-            else:
-                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, DOES NOT satisfy first group constraint" % (nominal_volume, note.volume, next_note.volume)
-            
+#                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, satisfies first group constraint" % (nominal_volume, note.volume, next_note.volume)
+#            else:
+#                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, DOES NOT satisfy first group constraint" % (nominal_volume, note.volume, next_note.volume)
+#            
             # KEREM
 #            else:
 #                score -= 1
@@ -168,10 +171,10 @@ def rule1_loudness(group_structure, nominal_volume):
             # not sure about abs
             if(next_note.volume - nominal_volume) <= (note.volume - nominal_volume):
                 score += 1
-                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, satisfies last group constraint" % (nominal_volume, note.volume, next_note.volume)
-            else:
-                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, DOES NOT satisfy last group constraint" % (nominal_volume, note.volume, next_note.volume)
-            
+#                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, satisfies last group constraint" % (nominal_volume, note.volume, next_note.volume)
+#            else:
+#                print "(VOLUMES) Nominal: %f, Current: %f, Next: %f, DOES NOT satisfy last group constraint" % (nominal_volume, note.volume, next_note.volume)
+#            
 #            else:
 #                score -= 1
                 
@@ -223,8 +226,8 @@ def rule3(noteList, nominal_volume, accentuation_curve):
     score = 0
     for i in range(len(noteList) - 1):
         lambda_d = accentuation_curve[i+1] - accentuation_curve[i]
-        next_loudness_dev = noteList[i+1].volume - nominal_volume
-        loudness_dev= noteList[i].volume - nominal_volume
+        next_loudness_dev = abs(noteList[i+1].volume - nominal_volume)
+        loudness_dev= abs(noteList[i].volume - nominal_volume)
         lambda_dev = next_loudness_dev - loudness_dev
         if lambda_dev * lambda_d > 0:
             score += 1
